@@ -177,12 +177,9 @@
   
   <script>
     (function() {
-      // Get the 'url' parameter from the URL
+      // Get the 'url' parameter from the wrapper URL
       var params = new URLSearchParams(window.location.search);
       var appUrl = params.get('url');
-      
-      // Also support 'page' parameter to pass through
-      var page = params.get('page');
       
       if (!appUrl) {
         // No URL provided - show error
@@ -191,15 +188,54 @@
         return;
       }
       
-      // Build the full URL with page parameter if provided
-      var fullUrl = appUrl;
-      if (page) {
-        fullUrl += (appUrl.includes('?') ? '&' : '?') + 'page=' + page;
-      }
+      // Store the base script URL (without query params) for navigation
+      var baseScriptUrl = appUrl.split('?')[0];
       
-      // Set the iframe source
+      // Parse any existing params from the appUrl
+      var appUrlParams = new URLSearchParams(appUrl.includes('?') ? appUrl.split('?')[1] : '');
+      
+      // Check for additional params in wrapper URL that should pass through
+      // These come from the email link: ?url=...exec%3Fpage%3Dregister%26token%3Dxxx
+      // The url param may already contain encoded params
+      
+      // Build the initial iframe URL
       var iframe = document.getElementById('app-frame');
-      iframe.src = fullUrl;
+      iframe.src = appUrl;
+      
+      // Listen for navigation messages from the iframe
+      window.addEventListener('message', function(event) {
+        // Verify the message is from our iframe (Apps Script domain)
+        if (!event.origin.includes('script.google.com')) {
+          return;
+        }
+        
+        var data = event.data;
+        
+        // Handle navigation request from iframe
+        if (data && data.type === 'navigate') {
+          var page = data.page || 'dashboard';
+          var newUrl = baseScriptUrl + '?page=' + page;
+          
+          // Add any additional params
+          if (data.params) {
+            for (var key in data.params) {
+              newUrl += '&' + key + '=' + encodeURIComponent(data.params[key]);
+            }
+          }
+          
+          // Show loading screen
+          document.getElementById('loading-screen').classList.remove('hidden');
+          
+          // Navigate iframe to new URL
+          iframe.src = newUrl;
+        }
+        
+        // Handle request to update wrapper URL (for bookmarking)
+        if (data && data.type === 'updateUrl') {
+          var newWrapperUrl = window.location.pathname + '?url=' + encodeURIComponent(baseScriptUrl + '?page=' + data.page);
+          window.history.replaceState({}, '', newWrapperUrl);
+        }
+      });
       
       // Hide loading screen when iframe loads
       iframe.onload = function() {
