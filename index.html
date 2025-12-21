@@ -191,28 +191,29 @@
       // Store the base script URL (without query params) for navigation
       var baseScriptUrl = appUrl.split('?')[0];
       
-      // Parse any existing params from the appUrl
-      var appUrlParams = new URLSearchParams(appUrl.includes('?') ? appUrl.split('?')[1] : '');
-      
-      // Check for additional params in wrapper URL that should pass through
-      // These come from the email link: ?url=...exec%3Fpage%3Dregister%26token%3Dxxx
-      // The url param may already contain encoded params
-      
       // Build the initial iframe URL
       var iframe = document.getElementById('app-frame');
       iframe.src = appUrl;
       
       // Listen for navigation messages from the iframe
       window.addEventListener('message', function(event) {
-        // Verify the message is from our iframe (Apps Script domain)
-        if (!event.origin.includes('script.google.com')) {
+        // Accept messages from Google domains (script.google.com or googleusercontent.com)
+        var origin = event.origin || '';
+        var isGoogleOrigin = origin.includes('google.com') || origin.includes('googleusercontent.com');
+        
+        if (!isGoogleOrigin) {
           return;
         }
         
         var data = event.data;
         
+        // Ignore non-object messages or messages without type
+        if (!data || typeof data !== 'object' || !data.type) {
+          return;
+        }
+        
         // Handle navigation request from iframe
-        if (data && data.type === 'navigate') {
+        if (data.type === 'navigate') {
           var page = data.page || 'dashboard';
           var newUrl = baseScriptUrl + '?page=' + page;
           
@@ -231,7 +232,7 @@
         }
         
         // Handle request to update wrapper URL (for bookmarking)
-        if (data && data.type === 'updateUrl') {
+        if (data.type === 'updateUrl') {
           var newWrapperUrl = window.location.pathname + '?url=' + encodeURIComponent(baseScriptUrl + '?page=' + data.page);
           window.history.replaceState({}, '', newWrapperUrl);
         }
