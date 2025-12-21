@@ -195,6 +195,20 @@
       var iframe = document.getElementById('app-frame');
       iframe.src = appUrl;
       
+      // Send the script URL to the iframe when it loads
+      iframe.onload = function() {
+        // Send the base script URL to the iframe
+        iframe.contentWindow.postMessage({
+          type: 'wrapperInit',
+          baseScriptUrl: baseScriptUrl
+        }, '*');
+        
+        // Hide loading screen
+        setTimeout(function() {
+          document.getElementById('loading-screen').classList.add('hidden');
+        }, 500);
+      };
+      
       // Listen for navigation messages from the iframe
       window.addEventListener('message', function(event) {
         // Accept messages from Google domains (script.google.com or googleusercontent.com)
@@ -212,38 +226,37 @@
           return;
         }
         
+        // Handle request for script URL from iframe
+        if (data.type === 'getScriptUrl') {
+          iframe.contentWindow.postMessage({
+            type: 'scriptUrl',
+            baseScriptUrl: baseScriptUrl
+          }, '*');
+        }
+        
         // Handle navigation request from iframe
         if (data.type === 'navigate') {
           var page = data.page || 'dashboard';
-          var newUrl = baseScriptUrl + '?page=' + page;
+          var newAppUrl = baseScriptUrl + '?page=' + page;
           
           // Add any additional params
           if (data.params) {
             for (var key in data.params) {
-              newUrl += '&' + key + '=' + encodeURIComponent(data.params[key]);
+              newAppUrl += '&' + key + '=' + encodeURIComponent(data.params[key]);
             }
           }
+          
+          // Update wrapper URL for bookmarking
+          var newWrapperUrl = window.location.pathname + '?url=' + encodeURIComponent(newAppUrl);
+          window.history.replaceState({}, '', newWrapperUrl);
           
           // Show loading screen
           document.getElementById('loading-screen').classList.remove('hidden');
           
           // Navigate iframe to new URL
-          iframe.src = newUrl;
-        }
-        
-        // Handle request to update wrapper URL (for bookmarking)
-        if (data.type === 'updateUrl') {
-          var newWrapperUrl = window.location.pathname + '?url=' + encodeURIComponent(baseScriptUrl + '?page=' + data.page);
-          window.history.replaceState({}, '', newWrapperUrl);
+          iframe.src = newAppUrl;
         }
       });
-      
-      // Hide loading screen when iframe loads
-      iframe.onload = function() {
-        setTimeout(function() {
-          document.getElementById('loading-screen').classList.add('hidden');
-        }, 500);
-      };
       
       // Fallback: hide loading screen after 8 seconds regardless
       setTimeout(function() {
