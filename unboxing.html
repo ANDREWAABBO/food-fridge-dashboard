@@ -22,25 +22,29 @@
             color: white;
         }
         
-        /* Logo Header */
-        .logo-header {
+        /* White Card for Logos */
+        .logo-card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px 50px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 50px;
-            margin-bottom: 50px;
+            gap: 40px;
             flex-wrap: wrap;
         }
         
-        .logo-header img {
-            height: 80px;
+        .logo-card img {
+            height: 60px;
             object-fit: contain;
         }
         
         .logo-divider {
-            width: 2px;
-            height: 60px;
-            background: rgba(255,255,255,0.3);
+            width: 1px;
+            height: 50px;
+            background: #e2e8f0;
         }
         
         .container {
@@ -99,12 +103,12 @@
             text-decoration: none;
             display: inline-block;
             margin-bottom: 60px;
-            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.3);
+            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.2);
         }
         
         .continue-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 15px 50px rgba(255, 255, 255, 0.4);
+            box-shadow: 0 15px 50px rgba(255, 255, 255, 0.3);
         }
         
         /* Tools Section */
@@ -259,11 +263,12 @@
         }
         
         @media (max-width: 600px) {
-            .logo-header {
-                gap: 30px;
+            .logo-card {
+                padding: 20px 30px;
+                gap: 25px;
             }
-            .logo-header img {
-                height: 60px;
+            .logo-card img {
+                height: 45px;
             }
             .logo-divider {
                 display: none;
@@ -286,11 +291,11 @@
     </style>
 </head>
 <body>
-    <!-- Logo Header -->
-    <div class="logo-header">
+    <!-- White Card for Logos -->
+    <div class="logo-card">
         <img src="https://andrewaabbo.github.io/food-fridge-dashboard/REDYREF_LOGO_Transparent.png" alt="REDYREF">
         <div class="logo-divider"></div>
-        <img src="https://andrewaabbo.github.io/food-fridge-dashboard/Quantum_LOGO_White.png" alt="Quantum Solutions">
+        <img src="https://andrewaabbo.github.io/food-fridge-dashboard/Quantum_LOGO_Transparentpng.png" alt="Quantum Solutions">
     </div>
 
     <div class="container">
@@ -318,7 +323,7 @@
                 Recommended tools for unboxing:
             </p>
             <div class="tools-links">
-                <a href="https://www.amazon.com/DEWALT-DWHT83550-Dewalt-Toughseries-Construction/dp/B0D45TC9D1" target="_blank" class="tool-link">Construction Clamp ↗</a>
+                <a href="https://www.amazon.com/DEWALT-DWHT83550-Dewalt-Toughseries-Construction/dp/B0D45TC9D1" target="_blank" class="tool-link">Construction Jack ↗</a>
                 <a href="https://www.webstaurantstore.com/lavex-900-lb-appliance-hand-truck-with-8-aluminum-wheels/2574WAPT900.html" target="_blank" class="tool-link">Appliance Hand Truck ↗</a>
                 <a href="https://www.lowes.com/pd/Everest-1-x10-Cam-Buckle-Strap-Tie-Down-300-LBS-Working-Load-limit-With-Storage-Strap-1-Pack/5005484463" target="_blank" class="tool-link">Tie Down Straps ↗</a>
             </div>
