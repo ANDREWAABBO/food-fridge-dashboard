@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - Unboxing Your Food Fridge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: white;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 900px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+        }
+        
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            background: #000;
+            margin-bottom: 30px;
+        }
+        
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 12px;
+        }
+        
+        .timer-container {
+            margin-bottom: 20px;
+        }
+        
+        .timer-text {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 10px;
+        }
+        
+        .timer {
+            font-size: 32px;
+            font-weight: 700;
+            color: #60a5fa;
+        }
+        
+        .continue-btn {
+            display: none;
+            padding: 16px 48px;
+            font-size: 18px;
+            font-weight: 600;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        
+        .continue-btn:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+        
+        .continue-btn.show {
+            display: inline-block;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .footer {
+            margin-top: 40px;
+            font-size: 12px;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to REDYREF!</h1>
+        <p class="subtitle">Please watch this unboxing guide before setting up your account</p>
+        
+        <div class="video-container">
+            <iframe 
+                src="https://drive.google.com/file/d/1AmuedqAFmGUOiwkR07bsfSRVr5NGN_87/preview"
+                allow="autoplay; encrypted-media" 
+                allowfullscreen>
+            </iframe>
+        </div>
+        
+        <div class="timer-container" id="timerContainer">
+            <p class="timer-text">Continue button will appear in:</p>
+            <div class="timer" id="timer">8:03</div>
+        </div>
+        
+        <a href="#" class="continue-btn" id="continueBtn" onclick="continueToRegistration()">
+            Continue to Registration →
+        </a>
+        
+        <p class="footer">© 2025 Quantum Solutions & REDYREF. All rights reserved.</p>
+    </div>
+    
+    <script>
+        // Video length: 8 minutes 3 seconds = 483 seconds
+        var totalSeconds = 483;
+        var remainingSeconds = totalSeconds;
+        
+        // Get registration URL from query parameter
+        var urlParams = new URLSearchParams(window.location.search);
+        var registrationUrl = urlParams.get('register');
+        
+        // Decode if needed
+        if (registrationUrl) {
+            registrationUrl = decodeURIComponent(registrationUrl);
+        }
+        
+        function updateTimer() {
+            var minutes = Math.floor(remainingSeconds / 60);
+            var seconds = remainingSeconds % 60;
+            
+            document.getElementById('timer').textContent = 
+                minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+            
+            if (remainingSeconds <= 0) {
+                // Show continue button, hide timer
+                document.getElementById('timerContainer').style.display = 'none';
+                document.getElementById('continueBtn').classList.add('show');
+            } else {
+                remainingSeconds--;
+                setTimeout(updateTimer, 1000);
+            }
+        }
+        
+        function continueToRegistration() {
+            if (registrationUrl) {
+                window.location.href = registrationUrl;
+            } else {
+                alert('Registration link not found. Please contact your administrator.');
+            }
+        }
+        
+        // Start countdown when page loads
+        updateTimer();
+    </script>
+</body>
+</html>
