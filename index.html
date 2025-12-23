@@ -200,6 +200,11 @@
       var tokenMatch = appUrl.match(/token=([^&]+)/);
       var registrationToken = tokenMatch ? tokenMatch[1] : '';
       
+      // Store token in localStorage for iframe to access
+      if (registrationToken) {
+        localStorage.setItem('registrationToken', registrationToken);
+      }
+      
       // Build the initial iframe URL
       var iframe = document.getElementById('app-frame');
       iframe.src = appUrl;
