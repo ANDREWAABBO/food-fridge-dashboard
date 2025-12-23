@@ -188,19 +188,29 @@
         return;
       }
       
+      // Decode if still encoded
+      if (appUrl.includes('%3A') || appUrl.includes('%2F')) {
+        appUrl = decodeURIComponent(appUrl);
+      }
+      
       // Store the base script URL (without query params) for navigation
       var baseScriptUrl = appUrl.split('?')[0];
+      
+      // Extract token from the appUrl if present
+      var tokenMatch = appUrl.match(/token=([^&]+)/);
+      var registrationToken = tokenMatch ? tokenMatch[1] : '';
       
       // Build the initial iframe URL
       var iframe = document.getElementById('app-frame');
       iframe.src = appUrl;
       
-      // Send the script URL to the iframe when it loads
+      // Send the script URL and token to the iframe when it loads
       iframe.onload = function() {
         // Send the base script URL to the iframe
         iframe.contentWindow.postMessage({
           type: 'wrapperInit',
-          baseScriptUrl: baseScriptUrl
+          baseScriptUrl: baseScriptUrl,
+          registrationToken: registrationToken
         }, '*');
         
         // Hide loading screen
@@ -231,6 +241,14 @@
           iframe.contentWindow.postMessage({
             type: 'scriptUrl',
             baseScriptUrl: baseScriptUrl
+          }, '*');
+        }
+        
+        // Handle request for registration token from iframe
+        if (data.type === 'getRegistrationToken') {
+          iframe.contentWindow.postMessage({
+            type: 'registrationToken',
+            token: registrationToken
           }, '*');
         }
         
