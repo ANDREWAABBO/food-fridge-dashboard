@@ -177,15 +177,30 @@
   
   <script>
     (function() {
+      // DEBUG: Show raw URL info
+      alert('DEBUG 1 - Full wrapper URL:\n' + window.location.href);
+      
       // Get the 'url' parameter from the wrapper URL
       var params = new URLSearchParams(window.location.search);
       var appUrl = params.get('url');
+      
+      // DEBUG: Show what params.get returned
+      alert('DEBUG 2 - appUrl from params.get("url"):\n' + appUrl);
       
       if (!appUrl) {
         // No URL provided - show error
         document.getElementById('error-screen').classList.add('show');
         document.getElementById('loading-screen').classList.add('hidden');
         return;
+      }
+      
+      // DEBUG: Check if still encoded
+      if (appUrl.includes('%3A') || appUrl.includes('%2F')) {
+        alert('DEBUG 3 - appUrl is STILL ENCODED, decoding again...');
+        appUrl = decodeURIComponent(appUrl);
+        alert('DEBUG 4 - appUrl after decode:\n' + appUrl);
+      } else {
+        alert('DEBUG 3 - appUrl is properly decoded');
       }
       
       // Store the base script URL (without query params) for navigation
