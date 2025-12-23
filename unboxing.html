@@ -399,9 +399,13 @@
         var urlParams = new URLSearchParams(window.location.search);
         var registrationUrl = urlParams.get('register');
         
-        // Decode if needed
+      // Decode - may need double decode due to encoding chain
         if (registrationUrl) {
             registrationUrl = decodeURIComponent(registrationUrl);
+            // Check if still encoded (contains %3A or %2F)
+            if (registrationUrl.includes('%3A') || registrationUrl.includes('%2F')) {
+                registrationUrl = decodeURIComponent(registrationUrl);
+            }
         }
         
         function showConfirmation() {
