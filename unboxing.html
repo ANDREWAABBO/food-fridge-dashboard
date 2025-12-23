@@ -22,100 +22,25 @@
             color: white;
         }
         
-        /* Top Toolbar */
-        .toolbar {
-            width: 100%;
-            max-width: 1000px;
-            background: rgba(255,255,255,0.95);
-            border-radius: 16px;
-            padding: 20px 25px;
-            margin-bottom: 30px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-        }
-        
-        .toolbar-title {
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #1e3a5f;
-            text-align: center;
-        }
-        
-        .toolbar-title span {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        
-        .tools-container {
+        /* Logo Header */
+        .logo-header {
             display: flex;
-            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            gap: 40px;
+            margin-bottom: 40px;
             flex-wrap: wrap;
-            justify-content: center;
         }
         
-        .tool-card {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 12px 18px;
-            text-decoration: none;
-            color: #334155;
-            transition: all 0.3s ease;
-            min-width: 200px;
+        .logo-header img {
+            height: 60px;
+            object-fit: contain;
         }
         
-        .tool-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-            border-color: #3b82f6;
-        }
-        
-        .tool-icon {
-            width: 45px;
-            height: 45px;
-            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-        
-        .tool-icon svg {
-            width: 24px;
-            height: 24px;
-            color: white;
-        }
-        
-        .tool-info {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        
-        .tool-name {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1e293b;
-        }
-        
-        .tool-store {
-            font-size: 11px;
-            color: #64748b;
-        }
-        
-        .tool-card .external-icon {
-            margin-left: auto;
-            opacity: 0.4;
-        }
-        
-        .tool-card:hover .external-icon {
-            opacity: 1;
+        .logo-divider {
+            width: 2px;
+            height: 50px;
+            background: rgba(255,255,255,0.3);
         }
         
         .container {
@@ -129,7 +54,7 @@
         }
         
         h1 {
-            font-size: 28px;
+            font-size: 32px;
             margin-bottom: 10px;
             font-weight: 600;
         }
@@ -173,12 +98,57 @@
             transition: all 0.3s ease;
             text-decoration: none;
             display: inline-block;
+            margin-bottom: 50px;
         }
         
         .continue-btn:hover {
             background: #2563eb;
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(59, 130, 246, 0.4);
+        }
+        
+        /* Tools Section - Minimal */
+        .tools-section {
+            border-top: 1px solid rgba(255,255,255,0.2);
+            padding-top: 30px;
+            text-align: center;
+        }
+        
+        .tools-label {
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        .tools-label svg {
+            width: 16px;
+            height: 16px;
+        }
+        
+        .tools-links {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .tool-link {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 13px;
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            transition: all 0.2s ease;
+        }
+        
+        .tool-link:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
         }
         
         .footer {
@@ -286,78 +256,32 @@
             background: #2563eb;
         }
         
-        @media (max-width: 768px) {
-            .tool-card {
-                min-width: 100%;
+        @media (max-width: 600px) {
+            .logo-header {
+                gap: 20px;
+            }
+            .logo-header img {
+                height: 45px;
+            }
+            .logo-divider {
+                display: none;
+            }
+            h1 {
+                font-size: 24px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Top Toolbar with Tools -->
-    <div class="toolbar">
-       <div class="toolbar-title"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 8px;"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg><span>Recommended Tools</span> for Unboxing & Moving Your Fridge</div>
-        <div class="tools-container">
-            <a href="https://www.amazon.com/DEWALT-DWHT83550-Dewalt-Toughseries-Construction/dp/B0D45TC9D1" target="_blank" class="tool-card">
-                <div class="tool-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
-                    </svg>
-                </div>
-                <div class="tool-info">
-                    <span class="tool-name">Construction Clamp</span>
-                    <span class="tool-store">Amazon • DEWALT</span>
-                </div>
-                <svg class="external-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                </svg>
-            </a>
-            <a href="https://www.webstaurantstore.com/lavex-900-lb-appliance-hand-truck-with-8-aluminum-wheels/2574WAPT900.html" target="_blank" class="tool-card">
-                <div class="tool-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="6" cy="19" r="2"></circle>
-                        <circle cx="18" cy="19" r="2"></circle>
-                        <path d="M4 17V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v10"></path>
-                        <path d="M8 19V9"></path>
-                        <path d="M16 19V9"></path>
-                        <path d="M4 12h16"></path>
-                    </svg>
-                </div>
-                <div class="tool-info">
-                    <span class="tool-name">Appliance Hand Truck</span>
-                    <span class="tool-store">WebstaurantStore • 900lb</span>
-                </div>
-                <svg class="external-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                </svg>
-            </a>
-            <a href="https://www.lowes.com/pd/Everest-1-x10-Cam-Buckle-Strap-Tie-Down-300-LBS-Working-Load-limit-With-Storage-Strap-1-Pack/5005484463" target="_blank" class="tool-card">
-                <div class="tool-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
-                        <line x1="3" y1="6" x2="21" y2="6"></line>
-                        <path d="M16 10a4 4 0 0 1-8 0"></path>
-                    </svg>
-                </div>
-                <div class="tool-info">
-                    <span class="tool-name">Tie Down Straps</span>
-                    <span class="tool-store">Lowe's • 300lb Rating</span>
-                </div>
-                <svg class="external-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-                    <polyline points="15 3 21 3 21 9"></polyline>
-                    <line x1="10" y1="14" x2="21" y2="3"></line>
-                </svg>
-            </a>
-        </div>
+    <!-- Logo Header -->
+    <div class="logo-header">
+        <img src="https://andrewaabbo.github.io/food-fridge-dashboard/REDYREF_LOGO_Transparent.png" alt="REDYREF">
+        <div class="logo-divider"></div>
+        <img src="https://andrewaabbo.github.io/food-fridge-dashboard/Quantum_LOGO_Transparentpng.png" alt="Quantum Solutions">
     </div>
 
     <div class="container">
-        <h1>Welcome to REDYREF!</h1>
+        <h1>Welcome!</h1>
         <p class="subtitle">Please watch this unboxing guide before setting up your account</p>
         
         <div class="video-container">
@@ -371,6 +295,21 @@
         <button class="continue-btn" onclick="showConfirmation()">
             Continue to Registration →
         </button>
+        
+        <!-- Tools Section -->
+        <div class="tools-section">
+            <p class="tools-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                </svg>
+                Recommended tools for unboxing:
+            </p>
+            <div class="tools-links">
+                <a href="https://www.amazon.com/DEWALT-DWHT83550-Dewalt-Toughseries-Construction/dp/B0D45TC9D1" target="_blank" class="tool-link">Construction Clamp ↗</a>
+                <a href="https://www.webstaurantstore.com/lavex-900-lb-appliance-hand-truck-with-8-aluminum-wheels/2574WAPT900.html" target="_blank" class="tool-link">Appliance Hand Truck ↗</a>
+                <a href="https://www.lowes.com/pd/Everest-1-x10-Cam-Buckle-Strap-Tie-Down-300-LBS-Working-Load-limit-With-Storage-Strap-1-Pack/5005484463" target="_blank" class="tool-link">Tie Down Straps ↗</a>
+            </div>
+        </div>
         
         <p class="footer">© 2025 Quantum Solutions & REDYREF. All rights reserved.</p>
     </div>
@@ -399,7 +338,7 @@
         var urlParams = new URLSearchParams(window.location.search);
         var registrationUrl = urlParams.get('register');
         
-      // Decode once (to undo the encodeURIComponent used when building the unboxing URL)
+        // Decode once (to undo the encodeURIComponent used when building the unboxing URL)
         if (registrationUrl) {
             registrationUrl = decodeURIComponent(registrationUrl);
         }
