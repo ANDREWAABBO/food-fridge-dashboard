@@ -18,15 +18,84 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             padding: 20px;
             color: white;
+        }
+        
+        /* Top Toolbar */
+        .toolbar {
+            width: 100%;
+            max-width: 1000px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 15px 20px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .toolbar-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .tools-container {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .tool-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            color: white;
+            transition: transform 0.2s ease;
+        }
+        
+        .tool-item:hover {
+            transform: translateY(-5px);
+        }
+        
+        .tool-image {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border-radius: 10px;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .tool-image img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        
+        .tool-label {
+            font-size: 11px;
+            text-align: center;
+            max-width: 90px;
+            opacity: 0.9;
         }
         
         .container {
             width: 100%;
             max-width: 900px;
             text-align: center;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
         
         h1 {
@@ -73,6 +142,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             text-decoration: none;
+            display: inline-block;
         }
         
         .continue-btn:hover {
@@ -188,6 +258,31 @@
     </style>
 </head>
 <body>
+    <!-- Top Toolbar with Tools -->
+    <div class="toolbar">
+        <div class="toolbar-title">🛠️ Tools You Might Need to Unbox and Move Your Fridge</div>
+        <div class="tools-container">
+            <a href="https://www.amazon.com/DEWALT-DWHT83550-Dewalt-Toughseries-Construction/dp/B0D45TC9D1" target="_blank" class="tool-item">
+                <div class="tool-image">
+                    <img src="https://m.media-amazon.com/images/I/81lxHHG3SDL._AC_SL1500_.jpg" alt="Clamp">
+                </div>
+                <span class="tool-label">Construction Clamp</span>
+            </a>
+            <a href="https://www.webstaurantstore.com/lavex-900-lb-appliance-hand-truck-with-8-aluminum-wheels/2574WAPT900.html" target="_blank" class="tool-item">
+                <div class="tool-image">
+                    <img src="https://cdnimg.webstaurantstore.com/images/products/large/634440/2574000.jpg" alt="Hand Truck">
+                </div>
+                <span class="tool-label">Appliance Hand Truck</span>
+            </a>
+            <a href="https://www.lowes.com/pd/Everest-1-x10-Cam-Buckle-Strap-Tie-Down-300-LBS-Working-Load-limit-With-Storage-Strap-1-Pack/5005484463" target="_blank" class="tool-item">
+                <div class="tool-image">
+                    <img src="https://mobileimages.lowes.com/productimages/cc7a8a3c-7d94-4f22-ad21-aa4a4b7a5d5d/63458656.jpg" alt="Tie Down Strap">
+                </div>
+                <span class="tool-label">Tie Down Strap</span>
+            </a>
+        </div>
+    </div>
+
     <div class="container">
         <h1>Welcome to REDYREF!</h1>
         <p class="subtitle">Please watch this unboxing guide before setting up your account</p>
