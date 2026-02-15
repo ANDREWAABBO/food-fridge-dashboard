@@ -357,6 +357,8 @@
       }
     }
 
+    var serverToday = ''; // yyyy-MM-dd from server
+
     // ========== LOAD EMPLOYEES (Cache-First) ==========
     function loadEmployees() {
       try {
@@ -364,6 +366,7 @@
         if (cached) {
           var parsed = JSON.parse(cached);
           if (parsed && parsed.employees && parsed.employees.length > 0) populateDropdown(parsed.employees, parsed.companyName);
+          if (parsed.today) serverToday = parsed.today;
         }
       } catch(e) {}
 
@@ -376,9 +379,39 @@
           return;
         }
         var freshEmployees = (response && response.employees) ? response.employees : [];
-        try { localStorage.setItem(TC_EMP_CACHE_KEY, JSON.stringify({ employees: freshEmployees, companyName: response.companyName || '' })); } catch(e) {}
+        if (response.today) serverToday = response.today;
+        try { localStorage.setItem(TC_EMP_CACHE_KEY, JSON.stringify({ employees: freshEmployees, companyName: response.companyName || '', today: serverToday })); } catch(e) {}
         populateDropdown(freshEmployees, response.companyName);
       });
+    }
+
+    // ========== FIND EMPLOYEE IN DATA ==========
+    function findEmployee(email) {
+      for (var i = 0; i < employeesData.length; i++) {
+        if (employeesData[i].email === email) return employeesData[i];
+      }
+      return null;
+    }
+
+    // ========== GET TODAY yyyy-MM-dd ==========
+    function getTodayStr() {
+      if (serverToday) return serverToday;
+      var n = new Date();
+      var mo = String(n.getMonth() + 1).padStart(2, '0');
+      var dy = String(n.getDate()).padStart(2, '0');
+      return n.getFullYear() + '-' + mo + '-' + dy;
+    }
+
+    // ========== LOCAL TIME STRING ==========
+    function localTimeStr() {
+      var now = new Date();
+      var h = now.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12; if (h === 0) h = 12;
+      var m = String(now.getMinutes()).padStart(2, '0');
+      var s = String(now.getSeconds()).padStart(2, '0');
+      var mo = String(now.getMonth() + 1).padStart(2, '0');
+      var dy = String(now.getDate()).padStart(2, '0');
+      return mo + '/' + dy + '/' + now.getFullYear() + ' ' + h + ':' + m + ':' + s + ' ' + ampm;
     }
 
     // ========== SUBMIT ==========
@@ -388,70 +421,79 @@
       var select = document.getElementById('employeeSelect');
       if (!select.value) { showErrorModal('Please select your name.'); return; }
 
-      var employeeName = '';
-      for (var i = 0; i < employeesData.length; i++) {
-        if (employeesData[i].email === select.value) { employeeName = employeesData[i].name; break; }
+      var emp = findEmployee(select.value);
+      if (!emp) { showErrorModal('Employee not found.'); return; }
+
+      var today = getTodayStr();
+      pendingCorrection = { name: emp.name, email: emp.email, action: actionEl.value };
+
+      // ---- 1. DENIED CORRECTION CHECK (instant) ----
+      if (emp.deniedCorrection) {
+        var corr = emp.deniedCorrection;
+        pendingCorrection.correctionId = corr.id;
+        pendingCorrection.correctionDate = corr.date;
+        pendingCorrection.correctionType = corr.type;
+        document.getElementById('deniedCorrDate').textContent = corr.date;
+        document.getElementById('deniedTimeLabel').textContent = corr.type === 'missed_clockin' ? 'What time did you start?' : 'What time did you leave?';
+        if (corr.submittedTime) document.getElementById('deniedCorrTime').value = corr.submittedTime;
+        document.getElementById('deniedCorrectionModal').style.display = 'flex';
+        return;
       }
 
-      var btn = document.getElementById('submitBtn');
-      btn.classList.add('loading'); btn.disabled = true;
+      // ---- 2. MISSED CLOCK-OUT CHECK (instant) ----
+      if (actionEl.value === 'Start Working' && emp.lastAction === 'Start Working' && emp.lastDate && emp.lastDate < today) {
+        pendingCorrection.missedDate = emp.lastDate;
+        document.getElementById('missedCODate').textContent = emp.lastDateFormatted || emp.lastDate;
+        document.getElementById('missedCOClockIn').textContent = emp.lastTime || '--';
+        document.getElementById('missedCOTime').value = '';
+        document.getElementById('missedClockOutModal').style.display = 'flex';
+        return;
+      }
 
-      pendingCorrection = { name: employeeName, email: select.value, action: actionEl.value };
+      // ---- 3. MISSED CLOCK-IN CHECK (instant) ----
+      if (actionEl.value === 'Ok, See You' && !emp.hasTodayClockIn) {
+        pendingCorrection.todayDate = today;
+        var todayObj = new Date();
+        var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        document.getElementById('missedCIDate').textContent = days[todayObj.getDay()] + ', ' + months[todayObj.getMonth()] + ' ' + todayObj.getDate();
+        document.getElementById('missedCITime').value = '';
+        document.getElementById('missedClockInModal').style.display = 'flex';
+        return;
+      }
 
-      var endpoint = 'page=tc-api-submit&name=' + encodeURIComponent(employeeName) +
-        '&email=' + encodeURIComponent(select.value) +
+      // ---- 4. DUPLICATE CHECK (instant) ----
+      if (emp.lastAction === actionEl.value && emp.lastDate === today) {
+        var lastAction = actionEl.value === 'Start Working' ? 'clocked in' : 'clocked out';
+        showSuccessModal(emp.name, actionEl.value, '');
+        document.getElementById('successTitle').textContent = "You're All Set!";
+        document.getElementById('successAction').textContent = 'You already ' + lastAction + ' today.';
+        document.getElementById('successTime').textContent = '';
+        return;
+      }
+
+      // ---- 5. CLEAN PUNCH — optimistic success + fire server ----
+      showSuccessModal(emp.name, actionEl.value, localTimeStr());
+
+      // Update local state immediately
+      emp.lastAction = actionEl.value;
+      emp.lastDate = today;
+      if (actionEl.value === 'Start Working') emp.hasTodayClockIn = true;
+
+      var endpoint = 'page=tc-api-submit&name=' + encodeURIComponent(emp.name) +
+        '&email=' + encodeURIComponent(emp.email) +
         '&action=' + encodeURIComponent(actionEl.value);
 
       apiCall(endpoint, function(response) {
-        btn.classList.remove('loading'); btn.disabled = false;
-        if (!response) { showErrorModal('No response from server. Please try again.'); return; }
-
-        // ---- DENIED CORRECTION ----
-        if (response._denied && response.correction) {
-          var corr = response.correction;
-          pendingCorrection.correctionId = corr.id;
-          pendingCorrection.correctionDate = corr.date;
-          pendingCorrection.correctionType = corr.type;
-          document.getElementById('deniedCorrDate').textContent = corr.date;
-          document.getElementById('deniedTimeLabel').textContent = corr.type === 'missed_clockin' ? 'What time did you start?' : 'What time did you leave?';
-          if (corr.submittedTime) document.getElementById('deniedCorrTime').value = corr.submittedTime;
-          document.getElementById('deniedCorrectionModal').style.display = 'flex';
+        if (!response) return;
+        if (response._error && !response._duplicate) {
+          document.getElementById('successModal').style.display = 'none';
+          showErrorModal(response._error);
           return;
         }
-
-        // ---- MISSED CLOCK-OUT ----
-        if (response._missedClockOut) {
-          pendingCorrection.missedDate = response.missedDate;
-          document.getElementById('missedCODate').textContent = response.missedDateFormatted || response.missedDate;
-          document.getElementById('missedCOClockIn').textContent = response.clockInTime || '--';
-          document.getElementById('missedCOTime').value = '';
-          document.getElementById('missedClockOutModal').style.display = 'flex';
-          return;
+        if (response.timestamp) {
+          document.getElementById('successTime').textContent = response.timestamp;
         }
-
-        // ---- MISSED CLOCK-IN ----
-        if (response._missedClockIn) {
-          pendingCorrection.todayDate = new Date().toISOString().split('T')[0];
-          document.getElementById('missedCIDate').textContent = response.todayFormatted || 'today';
-          document.getElementById('missedCITime').value = '';
-          document.getElementById('missedClockInModal').style.display = 'flex';
-          return;
-        }
-
-        // ---- DUPLICATE ----
-        if (response._duplicate) {
-          showSuccessModal(employeeName, actionEl.value, '');
-          document.getElementById('successTitle').textContent = "You're All Set!";
-          document.getElementById('successAction').textContent = response._error;
-          document.getElementById('successTime').textContent = '';
-          return;
-        }
-
-        // ---- ERROR ----
-        if (response._error) { showErrorModal(response._error); return; }
-
-        // ---- SUCCESS ----
-        showSuccessModal(employeeName, actionEl.value, response.timestamp || '');
       });
     }
 
@@ -474,6 +516,10 @@
         btn.classList.remove('loading'); btn.disabled = false;
         document.getElementById('missedClockOutModal').style.display = 'none';
         if (r && r._error) { showErrorModal(r._error); return; }
+        // Update local employee state so next punch works
+        var emp = findEmployee(pendingCorrection.email);
+        if (emp) { emp.lastAction = 'Start Working'; emp.lastDate = getTodayStr(); emp.hasTodayClockIn = true; }
+        try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
         showSuccessModal(pendingCorrection.name, 'Start Working', r.timestamp || '');
         document.getElementById('successTitle').textContent = 'Clocked In!';
       });
@@ -497,6 +543,10 @@
         btn.classList.remove('loading'); btn.disabled = false;
         document.getElementById('missedClockInModal').style.display = 'none';
         if (r && r._error) { showErrorModal(r._error); return; }
+        // Update local employee state
+        var emp = findEmployee(pendingCorrection.email);
+        if (emp) { emp.lastAction = 'Ok, See You'; emp.lastDate = getTodayStr(); emp.hasTodayClockIn = true; }
+        try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
         showSuccessModal(pendingCorrection.name, 'Ok, See You', r.timestamp || '');
         document.getElementById('successTitle').textContent = 'Clocked Out!';
       });
@@ -526,6 +576,10 @@
         btn.classList.remove('loading'); btn.disabled = false;
         document.getElementById('deniedCorrectionModal').style.display = 'none';
         if (r && r._error) { showErrorModal(r._error); return; }
+        // Clear denied correction from local state
+        var emp = findEmployee(pendingCorrection.email);
+        if (emp) { emp.deniedCorrection = null; }
+        try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
         showSuccessModal(pendingCorrection.name, pendingCorrection.action, r.timestamp || '');
         document.getElementById('successTitle').textContent = 'Correction Resubmitted!';
         document.getElementById('successAction').textContent = 'Your manager will review the updated time. Your punch has been recorded.';
