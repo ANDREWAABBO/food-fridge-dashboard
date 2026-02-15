@@ -77,6 +77,10 @@
     .modal-icon.success svg { stroke: #16a34a; }
     .modal-icon.error { background: #fee2e2; }
     .modal-icon.error svg { stroke: #dc2626; }
+    .modal-icon.warning { background: #fef3c7; }
+    .modal-icon.warning svg { stroke: #d97706; }
+    .modal-icon.denied { background: #fee2e2; }
+    .modal-icon.denied svg { stroke: #dc2626; }
     .modal-detail { color: #64748b; font-size: 14px; margin-top: 4px; }
     .modal-timestamp { color: #94a3b8; font-size: 13px; margin-top: 8px; }
     .btn-modal-close {
@@ -90,6 +94,41 @@
     .history-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-weight: 600; background: #f9fafb; position: sticky; top: 0; }
     .history-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
     .conn-error { display: none; text-align: center; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-bottom: 16px; font-size: 13px; color: #991b1b; }
+
+    /* Correction Modals */
+    .correction-info {
+      background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+      padding: 12px 16px; margin: 16px 0; text-align: left; font-size: 13px; color: #475569;
+    }
+    .correction-info .info-row { display: flex; justify-content: space-between; padding: 4px 0; }
+    .correction-info .info-label { color: #94a3b8; }
+    .correction-info .info-value { font-weight: 600; color: #1e293b; }
+    .time-picker-group { margin: 16px 0; text-align: left; }
+    .time-picker-group label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px; }
+    .time-picker-input {
+      width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 10px;
+      font-size: 16px; color: #374151; text-align: center; transition: border-color 0.2s;
+    }
+    .time-picker-input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .btn-correction-submit {
+      width: 100%; padding: 12px 24px; background: #2563eb; color: white; border: none;
+      border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 12px;
+      display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s;
+    }
+    .btn-correction-submit:hover { background: #1d4ed8; }
+    .btn-correction-submit:disabled { background: #9ca3af; cursor: not-allowed; }
+    .btn-correction-submit .btn-spinner {
+      display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.4);
+      border-top: 2px solid white; border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    .btn-correction-submit.loading .btn-spinner { display: inline-block; }
+    .btn-correction-submit.loading .btn-label { display: none; }
+    .btn-correction-cancel {
+      width: 100%; padding: 10px; background: none; border: 2px solid #e5e7eb;
+      border-radius: 10px; font-size: 14px; font-weight: 600; color: #6b7280;
+      cursor: pointer; margin-top: 8px; transition: all 0.2s;
+    }
+    .btn-correction-cancel:hover { border-color: #d1d5db; background: #f9fafb; }
   </style>
 </head>
 <body>
@@ -172,6 +211,70 @@
     </div>
   </div>
 
+  <!-- Missed Clock-Out Modal -->
+  <div class="modal-overlay" id="missedClockOutModal">
+    <div class="modal-card">
+      <div class="modal-icon warning">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </div>
+      <h3>Missed Clock-Out</h3>
+      <p style="color:#475569;font-size:14px;">You didn't clock out on <strong id="missedCODate"></strong>.</p>
+      <div class="correction-info">
+        <div class="info-row"><span class="info-label">Clocked In</span><span class="info-value" id="missedCOClockIn"></span></div>
+        <div class="info-row"><span class="info-label">Clocked Out</span><span class="info-value" style="color:#dc2626;">Missing</span></div>
+      </div>
+      <div class="time-picker-group">
+        <label>What time did you leave?</label>
+        <input type="time" id="missedCOTime" class="time-picker-input">
+      </div>
+      <button class="btn-correction-submit" id="missedCOSubmitBtn" onclick="submitMissedClockOut()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">Submit & Clock In</span>
+      </button>
+      <button class="btn-correction-cancel" onclick="closeCorrectionModal('missedClockOutModal')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Missed Clock-In Modal -->
+  <div class="modal-overlay" id="missedClockInModal">
+    <div class="modal-card">
+      <div class="modal-icon warning">
+        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </div>
+      <h3>Missed Clock-In</h3>
+      <p style="color:#475569;font-size:14px;">You didn't clock in today (<strong id="missedCIDate"></strong>).</p>
+      <div class="time-picker-group">
+        <label>What time did you start working?</label>
+        <input type="time" id="missedCITime" class="time-picker-input">
+      </div>
+      <button class="btn-correction-submit" id="missedCISubmitBtn" onclick="submitMissedClockIn()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">Submit & Clock Out</span>
+      </button>
+      <button class="btn-correction-cancel" onclick="closeCorrectionModal('missedClockInModal')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Denied Correction Modal -->
+  <div class="modal-overlay" id="deniedCorrectionModal">
+    <div class="modal-card">
+      <div class="modal-icon denied">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+      </div>
+      <h3>Correction Not Approved</h3>
+      <p style="color:#475569;font-size:14px;">Your time correction for <strong id="deniedCorrDate"></strong> was not approved by management. Please update the time and resubmit.</p>
+      <div class="time-picker-group">
+        <label id="deniedTimeLabel">Corrected time</label>
+        <input type="time" id="deniedCorrTime" class="time-picker-input">
+      </div>
+      <button class="btn-correction-submit" id="deniedSubmitBtn" onclick="resubmitDeniedCorrection()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">Update & Resubmit</span>
+      </button>
+      <button class="btn-correction-cancel" onclick="closeCorrectionModal('deniedCorrectionModal')">Cancel</button>
+    </div>
+  </div>
+
   <!-- History Modal -->
   <div class="modal-overlay history-modal" id="historyModal">
     <div class="modal-card">
@@ -192,11 +295,11 @@
   </div>
 
   <script>
-    // Get API base URL from query parameter
     var params = new URLSearchParams(window.location.search);
     var API_BASE = params.get('api') || '';
     var employeesData = [];
     var TC_EMP_CACHE_KEY = '_cache_tcEmployees';
+    var pendingCorrection = {};
 
     // ========== INIT ==========
     (function init() {
@@ -231,10 +334,6 @@
         .then(function(r) { return r.json(); })
         .then(callback)
         .catch(function(e) {
-          // Fallback: try JSONP style
-          var cb = '_cb_' + Date.now();
-          window[cb] = function(data) { callback(data); delete window[cb]; };
-          // If fetch fails, show error
           document.getElementById('connError').style.display = 'block';
           callback({ _error: 'Connection failed: ' + e.message });
         });
@@ -245,19 +344,13 @@
       employeesData = employees;
       var select = document.getElementById('employeeSelect');
       select.innerHTML = '<option value="">Select your name...</option>';
-
-      if (employees.length === 0) {
-        select.innerHTML = '<option value="">No employees found</option>';
-        return;
-      }
-
+      if (employees.length === 0) { select.innerHTML = '<option value="">No employees found</option>'; return; }
       for (var i = 0; i < employees.length; i++) {
         var opt = document.createElement('option');
         opt.value = employees[i].email;
         opt.textContent = employees[i].name;
         select.appendChild(opt);
       }
-
       if (companyName) {
         document.getElementById('companyName').textContent = companyName;
         document.getElementById('footerText').textContent = companyName + ' \u2022 Employee Management System';
@@ -266,39 +359,24 @@
 
     // ========== LOAD EMPLOYEES (Cache-First) ==========
     function loadEmployees() {
-      // 1. Instant load from localStorage cache
       try {
         var cached = localStorage.getItem(TC_EMP_CACHE_KEY);
         if (cached) {
           var parsed = JSON.parse(cached);
-          if (parsed && parsed.employees && parsed.employees.length > 0) {
-            populateDropdown(parsed.employees, parsed.companyName);
-          }
+          if (parsed && parsed.employees && parsed.employees.length > 0) populateDropdown(parsed.employees, parsed.companyName);
         }
       } catch(e) {}
 
-      // 2. Background refresh from API (always runs to pick up changes)
       apiCall('page=tc-api-employees', function(response) {
         if (response && response._error) {
-          // Only show error if we have no cached data
           if (employeesData.length === 0) {
             document.getElementById('connError').style.display = 'block';
             document.getElementById('connError').textContent = response._error;
           }
           return;
         }
-
         var freshEmployees = (response && response.employees) ? response.employees : [];
-
-        // Cache the fresh response
-        try {
-          localStorage.setItem(TC_EMP_CACHE_KEY, JSON.stringify({
-            employees: freshEmployees,
-            companyName: response.companyName || ''
-          }));
-        } catch(e) {}
-
-        // Update dropdown with fresh data
+        try { localStorage.setItem(TC_EMP_CACHE_KEY, JSON.stringify({ employees: freshEmployees, companyName: response.companyName || '' })); } catch(e) {}
         populateDropdown(freshEmployees, response.companyName);
       });
     }
@@ -318,35 +396,132 @@
       var btn = document.getElementById('submitBtn');
       btn.classList.add('loading'); btn.disabled = true;
 
-      // Show optimistic success
-      var now = new Date();
-      var h = now.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
-      h = h % 12; if (h === 0) h = 12;
-      var m = String(now.getMinutes()).padStart(2, '0');
-      var s = String(now.getSeconds()).padStart(2, '0');
-      var mo = String(now.getMonth() + 1).padStart(2, '0');
-      var dy = String(now.getDate()).padStart(2, '0');
-      var localTime = mo + '/' + dy + '/' + now.getFullYear() + ' ' + h + ':' + m + ':' + s + ' ' + ampm;
-
-      btn.classList.remove('loading'); btn.disabled = false;
-      showSuccessModal(employeeName, actionEl.value, localTime);
+      pendingCorrection = { name: employeeName, email: select.value, action: actionEl.value };
 
       var endpoint = 'page=tc-api-submit&name=' + encodeURIComponent(employeeName) +
         '&email=' + encodeURIComponent(select.value) +
         '&action=' + encodeURIComponent(actionEl.value);
 
       apiCall(endpoint, function(response) {
-        if (response && response._error) {
-          if (response._duplicate) {
-            document.getElementById('successTitle').textContent = "You're All Set!";
-            document.getElementById('successAction').textContent = response._error;
-          } else {
-            document.getElementById('successModal').style.display = 'none';
-            showErrorModal(response._error);
-          }
+        btn.classList.remove('loading'); btn.disabled = false;
+        if (!response) { showErrorModal('No response from server. Please try again.'); return; }
+
+        if (response._denied && response.correction) {
+          var corr = response.correction;
+          pendingCorrection.correctionId = corr.id;
+          pendingCorrection.correctionDate = corr.date;
+          pendingCorrection.correctionType = corr.type;
+          document.getElementById('deniedCorrDate').textContent = corr.date;
+          document.getElementById('deniedTimeLabel').textContent = corr.type === 'missed_clockin' ? 'What time did you start?' : 'What time did you leave?';
+          if (corr.submittedTime) document.getElementById('deniedCorrTime').value = corr.submittedTime;
+          document.getElementById('deniedCorrectionModal').style.display = 'flex';
+          return;
         }
+        if (response._missedClockOut) {
+          pendingCorrection.missedDate = response.missedDate;
+          document.getElementById('missedCODate').textContent = response.missedDateFormatted || response.missedDate;
+          document.getElementById('missedCOClockIn').textContent = response.clockInTime || '--';
+          document.getElementById('missedCOTime').value = '';
+          document.getElementById('missedClockOutModal').style.display = 'flex';
+          return;
+        }
+        if (response._missedClockIn) {
+          pendingCorrection.todayDate = new Date().toISOString().split('T')[0];
+          document.getElementById('missedCIDate').textContent = response.todayFormatted || 'today';
+          document.getElementById('missedCITime').value = '';
+          document.getElementById('missedClockInModal').style.display = 'flex';
+          return;
+        }
+        if (response._duplicate) {
+          showSuccessModal(employeeName, actionEl.value, '');
+          document.getElementById('successTitle').textContent = "You're All Set!";
+          document.getElementById('successAction').textContent = response._error;
+          document.getElementById('successTime').textContent = '';
+          return;
+        }
+        if (response._error) { showErrorModal(response._error); return; }
+        showSuccessModal(employeeName, actionEl.value, response.timestamp || '');
       });
     }
+
+    // ========== CORRECTION SUBMISSIONS ==========
+    function submitMissedClockOut() {
+      var timeVal = document.getElementById('missedCOTime').value;
+      if (!timeVal) { showErrorModal('Please select the time you left.'); return; }
+      var btn = document.getElementById('missedCOSubmitBtn');
+      btn.classList.add('loading'); btn.disabled = true;
+
+      var endpoint = 'page=tc-api-correction' +
+        '&email=' + encodeURIComponent(pendingCorrection.email) +
+        '&name=' + encodeURIComponent(pendingCorrection.name) +
+        '&type=missed_clockout' +
+        '&time=' + encodeURIComponent(timeVal) +
+        '&date=' + encodeURIComponent(pendingCorrection.missedDate) +
+        '&currentAction=Start%20Working';
+
+      apiCall(endpoint, function(r) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        document.getElementById('missedClockOutModal').style.display = 'none';
+        if (r && r._error) { showErrorModal(r._error); return; }
+        showSuccessModal(pendingCorrection.name, 'Start Working', r.timestamp || '');
+        document.getElementById('successTitle').textContent = 'Clocked In!';
+      });
+    }
+
+    function submitMissedClockIn() {
+      var timeVal = document.getElementById('missedCITime').value;
+      if (!timeVal) { showErrorModal('Please select the time you started.'); return; }
+      var btn = document.getElementById('missedCISubmitBtn');
+      btn.classList.add('loading'); btn.disabled = true;
+
+      var endpoint = 'page=tc-api-correction' +
+        '&email=' + encodeURIComponent(pendingCorrection.email) +
+        '&name=' + encodeURIComponent(pendingCorrection.name) +
+        '&type=missed_clockin' +
+        '&time=' + encodeURIComponent(timeVal) +
+        '&date=' + encodeURIComponent(pendingCorrection.todayDate) +
+        '&currentAction=Ok%2C%20See%20You';
+
+      apiCall(endpoint, function(r) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        document.getElementById('missedClockInModal').style.display = 'none';
+        if (r && r._error) { showErrorModal(r._error); return; }
+        showSuccessModal(pendingCorrection.name, 'Ok, See You', r.timestamp || '');
+        document.getElementById('successTitle').textContent = 'Clocked Out!';
+      });
+    }
+
+    function resubmitDeniedCorrection() {
+      var timeVal = document.getElementById('deniedCorrTime').value;
+      if (!timeVal) { showErrorModal('Please select a corrected time.'); return; }
+      var btn = document.getElementById('deniedSubmitBtn');
+      btn.classList.add('loading'); btn.disabled = true;
+
+      var dateStr = pendingCorrection.correctionDate || '';
+      var dateParts = dateStr.split('/');
+      var isoDate = dateStr;
+      if (dateParts.length === 3) isoDate = dateParts[2] + '-' + dateParts[0].padStart(2, '0') + '-' + dateParts[1].padStart(2, '0');
+
+      var endpoint = 'page=tc-api-correction' +
+        '&email=' + encodeURIComponent(pendingCorrection.email) +
+        '&name=' + encodeURIComponent(pendingCorrection.name) +
+        '&type=' + encodeURIComponent(pendingCorrection.correctionType || 'missed_clockout') +
+        '&time=' + encodeURIComponent(timeVal) +
+        '&date=' + encodeURIComponent(isoDate) +
+        '&currentAction=' + encodeURIComponent(pendingCorrection.action) +
+        '&correctionId=' + encodeURIComponent(pendingCorrection.correctionId);
+
+      apiCall(endpoint, function(r) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        document.getElementById('deniedCorrectionModal').style.display = 'none';
+        if (r && r._error) { showErrorModal(r._error); return; }
+        showSuccessModal(pendingCorrection.name, pendingCorrection.action, r.timestamp || '');
+        document.getElementById('successTitle').textContent = 'Correction Resubmitted!';
+        document.getElementById('successAction').textContent = 'Your manager will review the updated time. Your punch has been recorded.';
+      });
+    }
+
+    function closeCorrectionModal(modalId) { document.getElementById(modalId).style.display = 'none'; }
 
     // ========== MODALS ==========
     function showSuccessModal(name, action, timestamp) {
