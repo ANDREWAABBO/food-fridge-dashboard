@@ -138,6 +138,13 @@
   function showResult(title, message, color) {
     document.getElementById('loadingState').style.display = 'none';
     document.getElementById('vacationState').style.display = 'none';
+    // Route errors to error state
+    if (color === '#dc2626') {
+      document.getElementById('errorTitle').textContent = title;
+      document.getElementById('errorMessage').textContent = message;
+      document.getElementById('errorState').style.display = 'block';
+      return;
+    }
     document.getElementById('resultIcon').style.background = color || '#16a34a';
     document.getElementById('resultTitle').textContent = title;
     document.getElementById('resultMessage').textContent = message;
