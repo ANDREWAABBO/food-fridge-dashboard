@@ -398,29 +398,16 @@
 
       pendingCorrection = { name: employeeName, email: select.value, action: actionEl.value };
 
-      // Optimistic UI: show success immediately
-      var now = new Date();
-      var h = now.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
-      h = h % 12; if (h === 0) h = 12;
-      var m = String(now.getMinutes()).padStart(2, '0');
-      var s = String(now.getSeconds()).padStart(2, '0');
-      var mo = String(now.getMonth() + 1).padStart(2, '0');
-      var dy = String(now.getDate()).padStart(2, '0');
-      var localTime = mo + '/' + dy + '/' + now.getFullYear() + ' ' + h + ':' + m + ':' + s + ' ' + ampm;
-
-      btn.classList.remove('loading'); btn.disabled = false;
-      showSuccessModal(employeeName, actionEl.value, localTime);
-
       var endpoint = 'page=tc-api-submit&name=' + encodeURIComponent(employeeName) +
         '&email=' + encodeURIComponent(select.value) +
         '&action=' + encodeURIComponent(actionEl.value);
 
       apiCall(endpoint, function(response) {
-        if (!response) return;
+        btn.classList.remove('loading'); btn.disabled = false;
+        if (!response) { showErrorModal('No response from server. Please try again.'); return; }
 
-        // ---- DENIED CORRECTION: swap success for denied modal ----
+        // ---- DENIED CORRECTION ----
         if (response._denied && response.correction) {
-          document.getElementById('successModal').style.display = 'none';
           var corr = response.correction;
           pendingCorrection.correctionId = corr.id;
           pendingCorrection.correctionDate = corr.date;
@@ -432,9 +419,8 @@
           return;
         }
 
-        // ---- MISSED CLOCK-OUT: swap success for correction modal ----
+        // ---- MISSED CLOCK-OUT ----
         if (response._missedClockOut) {
-          document.getElementById('successModal').style.display = 'none';
           pendingCorrection.missedDate = response.missedDate;
           document.getElementById('missedCODate').textContent = response.missedDateFormatted || response.missedDate;
           document.getElementById('missedCOClockIn').textContent = response.clockInTime || '--';
@@ -443,9 +429,8 @@
           return;
         }
 
-        // ---- MISSED CLOCK-IN: swap success for correction modal ----
+        // ---- MISSED CLOCK-IN ----
         if (response._missedClockIn) {
-          document.getElementById('successModal').style.display = 'none';
           pendingCorrection.todayDate = new Date().toISOString().split('T')[0];
           document.getElementById('missedCIDate').textContent = response.todayFormatted || 'today';
           document.getElementById('missedCITime').value = '';
@@ -453,25 +438,20 @@
           return;
         }
 
-        // ---- DUPLICATE: update the already-shown success modal ----
+        // ---- DUPLICATE ----
         if (response._duplicate) {
+          showSuccessModal(employeeName, actionEl.value, '');
           document.getElementById('successTitle').textContent = "You're All Set!";
           document.getElementById('successAction').textContent = response._error;
           document.getElementById('successTime').textContent = '';
           return;
         }
 
-        // ---- ERROR: swap success for error ----
-        if (response._error) {
-          document.getElementById('successModal').style.display = 'none';
-          showErrorModal(response._error);
-          return;
-        }
+        // ---- ERROR ----
+        if (response._error) { showErrorModal(response._error); return; }
 
-        // ---- NORMAL SUCCESS: update timestamp from server ----
-        if (response.timestamp) {
-          document.getElementById('successTime').textContent = response.timestamp;
-        }
+        // ---- SUCCESS ----
+        showSuccessModal(employeeName, actionEl.value, response.timestamp || '');
       });
     }
 
