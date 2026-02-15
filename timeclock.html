@@ -78,7 +78,9 @@
     .modal-icon.error { background: #fee2e2; }
     .modal-icon.error svg { stroke: #dc2626; }
     .modal-icon.warning { background: #fef3c7; }
-    .modal-icon.warning svg { stroke: #d97706; }
+    .modal-icon.warning svg { stroke: none; }
+    .modal-icon.warning svg .tri { fill: #d97706; }
+    .modal-icon.warning svg .exc { stroke: white; stroke-width: 2.5; }
     .modal-icon.denied { background: #fee2e2; }
     .modal-icon.denied svg { stroke: #dc2626; }
     .modal-detail { color: #64748b; font-size: 14px; margin-top: 4px; }
@@ -215,7 +217,7 @@
   <div class="modal-overlay" id="missedClockOutModal">
     <div class="modal-card">
       <div class="modal-icon warning">
-        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        <svg viewBox="0 0 24 24"><path class="tri" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line class="exc" x1="12" y1="9" x2="12" y2="13"></line><line class="exc" x1="12" y1="17" x2="12.01" y2="17"></line></svg>
       </div>
       <h3>Missed Clock-Out</h3>
       <p style="color:#475569;font-size:14px;">You didn't clock out on <strong id="missedCODate"></strong>.</p>
@@ -239,7 +241,7 @@
   <div class="modal-overlay" id="missedClockInModal">
     <div class="modal-card">
       <div class="modal-icon warning">
-        <svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        <svg viewBox="0 0 24 24"><path class="tri" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line class="exc" x1="12" y1="9" x2="12" y2="13"></line><line class="exc" x1="12" y1="17" x2="12.01" y2="17"></line></svg>
       </div>
       <h3>Missed Clock-In</h3>
       <p style="color:#475569;font-size:14px;">You didn't clock in today (<strong id="missedCIDate"></strong>).</p>
