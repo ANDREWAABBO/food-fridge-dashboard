@@ -107,6 +107,31 @@
     </div>
   </div>
 
+  <!-- Attendance Notes State (for approve/deny with notes) -->
+  <div id="attendanceState" style="display:none;">
+    <div class="icon" id="attIcon" style="background:#16a34a;">
+      <svg id="attIconApprove" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+      <svg id="attIconDeny" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </div>
+    <h2 class="title" id="attTitle">Confirm</h2>
+    <p class="message" id="attMessage"></p>
+    <div style="text-align:left; margin-top:16px;">
+      <div class="form-group">
+        <label class="form-label">Private Manager Notes (optional)</label>
+        <textarea id="attNotes" class="form-input" rows="3" placeholder="Add notes for documentation..." style="resize:vertical; min-height:60px; font-family:inherit;"></textarea>
+      </div>
+      <button class="btn-submit" id="attSubmitBtn" onclick="submitAttendanceResponse()">
+        <div class="btn-spin"></div>
+        <span class="btn-text" id="attBtnText">Confirm</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Error State -->
   <div id="errorState" style="display:none;">
     <div class="icon" style="background:#dc2626;">
@@ -191,31 +216,59 @@
     });
   }
 
-  // ========== INIT: Fire API call immediately ==========
+  var attDecision = ''; // 'approve-attendance' or 'deny-attendance'
+
+  function submitAttendanceResponse() {
+    var notes = document.getElementById('attNotes').value.trim();
+    var btn = document.getElementById('attSubmitBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    var endpoint = 'page=tc-api-alert-action&action=' + encodeURIComponent(attDecision) +
+      '&token=' + encodeURIComponent(TOKEN) + '&notes=' + encodeURIComponent(notes);
+
+    apiCall(endpoint, function(r) {
+      btn.classList.remove('loading'); btn.disabled = false;
+      if (r && r.title) { showResult(r.title, r.message, r.color); return; }
+      if (r && r._error) { showError(r._error); return; }
+      showError('Unexpected response from server.');
+    });
+  }
+
+  function showAttendanceForm(isApprove, empName) {
+    document.getElementById('loadingState').style.display = 'none';
+    var label = isApprove ? 'Approve' : 'Deny';
+    document.getElementById('attTitle').textContent = label + ' Attendance';
+    document.getElementById('attMessage').textContent = (isApprove ? 'Approving' : 'Denying') + ' attendance report for ' + (empName || 'employee') + '.';
+    document.getElementById('attBtnText').textContent = 'Confirm ' + label;
+    document.getElementById('attIcon').style.background = isApprove ? '#16a34a' : '#dc2626';
+    document.getElementById('attIconApprove').style.display = isApprove ? 'block' : 'none';
+    document.getElementById('attIconDeny').style.display = isApprove ? 'none' : 'block';
+    document.getElementById('attendanceState').style.display = 'block';
+  }
+
+  // ========== INIT: Fire API call or show form ==========
   (function() {
     if (!API_BASE || !ACTION || !TOKEN) {
       showError('Invalid link. Missing required parameters.');
       return;
     }
 
+    // Attendance actions: show notes form first
+    if (ACTION === 'approve-attendance' || ACTION === 'deny-attendance') {
+      attDecision = ACTION;
+      var empName = params.get('empName') || '';
+      showAttendanceForm(ACTION === 'approve-attendance', decodeURIComponent(empName));
+      return;
+    }
+
+    // All other actions: call API immediately
     var endpoint = 'page=tc-api-alert-action&action=' + encodeURIComponent(ACTION) +
       '&token=' + encodeURIComponent(TOKEN);
 
     apiCall(endpoint, function(r) {
       if (!r) { showError('No response from server.'); return; }
-
-      // Vacation picker
-      if (r.vacationPicker) {
-        showVacationPicker(r.name || '', r.date || '', r.token || TOKEN);
-        return;
-      }
-
-      // Normal result
-      if (r.title) {
-        showResult(r.title, r.message, r.color);
-        return;
-      }
-
+      if (r.vacationPicker) { showVacationPicker(r.name || '', r.date || '', r.token || TOKEN); return; }
+      if (r.title) { showResult(r.title, r.message, r.color); return; }
       if (r._error) { showError(r._error); return; }
       showError('Unexpected response from server.');
     });
