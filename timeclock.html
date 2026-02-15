@@ -196,6 +196,7 @@
     var params = new URLSearchParams(window.location.search);
     var API_BASE = params.get('api') || '';
     var employeesData = [];
+    var TC_EMP_CACHE_KEY = '_cache_tcEmployees';
 
     // ========== INIT ==========
     (function init() {
@@ -239,36 +240,66 @@
         });
     }
 
-    // ========== LOAD EMPLOYEES ==========
+    // ========== POPULATE DROPDOWN ==========
+    function populateDropdown(employees, companyName) {
+      employeesData = employees;
+      var select = document.getElementById('employeeSelect');
+      select.innerHTML = '<option value="">Select your name...</option>';
+
+      if (employees.length === 0) {
+        select.innerHTML = '<option value="">No employees found</option>';
+        return;
+      }
+
+      for (var i = 0; i < employees.length; i++) {
+        var opt = document.createElement('option');
+        opt.value = employees[i].email;
+        opt.textContent = employees[i].name;
+        select.appendChild(opt);
+      }
+
+      if (companyName) {
+        document.getElementById('companyName').textContent = companyName;
+        document.getElementById('footerText').textContent = companyName + ' \u2022 Employee Management System';
+      }
+    }
+
+    // ========== LOAD EMPLOYEES (Cache-First) ==========
     function loadEmployees() {
+      // 1. Instant load from localStorage cache
+      try {
+        var cached = localStorage.getItem(TC_EMP_CACHE_KEY);
+        if (cached) {
+          var parsed = JSON.parse(cached);
+          if (parsed && parsed.employees && parsed.employees.length > 0) {
+            populateDropdown(parsed.employees, parsed.companyName);
+          }
+        }
+      } catch(e) {}
+
+      // 2. Background refresh from API (always runs to pick up changes)
       apiCall('page=tc-api-employees', function(response) {
         if (response && response._error) {
-          document.getElementById('connError').style.display = 'block';
-          document.getElementById('connError').textContent = response._error;
+          // Only show error if we have no cached data
+          if (employeesData.length === 0) {
+            document.getElementById('connError').style.display = 'block';
+            document.getElementById('connError').textContent = response._error;
+          }
           return;
         }
 
-        employeesData = (response && response.employees) ? response.employees : [];
-        var select = document.getElementById('employeeSelect');
-        select.innerHTML = '<option value="">Select your name...</option>';
+        var freshEmployees = (response && response.employees) ? response.employees : [];
 
-        if (employeesData.length === 0) {
-          select.innerHTML = '<option value="">No employees found</option>';
-          return;
-        }
+        // Cache the fresh response
+        try {
+          localStorage.setItem(TC_EMP_CACHE_KEY, JSON.stringify({
+            employees: freshEmployees,
+            companyName: response.companyName || ''
+          }));
+        } catch(e) {}
 
-        for (var i = 0; i < employeesData.length; i++) {
-          var opt = document.createElement('option');
-          opt.value = employeesData[i].email;
-          opt.textContent = employeesData[i].name;
-          select.appendChild(opt);
-        }
-
-        // Set company name if available
-        if (response.companyName) {
-          document.getElementById('companyName').textContent = response.companyName;
-          document.getElementById('footerText').textContent = response.companyName + ' \u2022 Employee Management System';
-        }
+        // Update dropdown with fresh data
+        populateDropdown(freshEmployees, response.companyName);
       });
     }
 
