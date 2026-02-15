@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Processing...</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #f8fafc;
+  }
+  .card {
+    text-align: center; padding: 40px; background: white;
+    border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    max-width: 420px; width: 90%;
+  }
+  .icon {
+    width: 60px; height: 60px; border-radius: 50%;
+    margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;
+  }
+  .icon svg { width: 32px; height: 32px; stroke: white; fill: none; }
+  .title { margin: 0 0 10px; color: #1e293b; font-size: 22px; }
+  .message { margin: 0; color: #64748b; font-size: 14px; line-height: 1.6; }
+  .hint { margin-top: 20px; color: #94a3b8; font-size: 13px; }
+
+  /* Spinner */
+  .spinner { width: 40px; height: 40px; margin: 0 auto 20px; }
+  .spinner svg { animation: spin 1s linear infinite; stroke: #3b82f6; }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+
+  /* Vacation Picker */
+  .vacation-form { display: none; text-align: left; margin-top: 16px; }
+  .form-group { margin-bottom: 16px; }
+  .form-label { display: block; font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 4px; }
+  .form-input {
+    width: 100%; padding: 10px; border: 1px solid #d1d5db;
+    border-radius: 8px; font-size: 14px; box-sizing: border-box;
+  }
+  .btn-submit {
+    width: 100%; padding: 12px; background: #16a34a; color: white;
+    border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+  }
+  .btn-submit:hover { background: #15803d; }
+  .btn-submit:disabled { background: #9ca3af; cursor: not-allowed; }
+  .btn-submit .btn-spin {
+    display: none; width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: white; border-radius: 50%; animation: spin 0.6s linear infinite;
+    margin: 0 auto;
+  }
+  .btn-submit.loading .btn-text { display: none; }
+  .btn-submit.loading .btn-spin { display: inline-block; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <!-- Processing State -->
+  <div id="loadingState">
+    <div class="spinner">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
+      </svg>
+    </div>
+    <h2 class="title">Processing...</h2>
+    <p class="message">Please wait a moment.</p>
+  </div>
+
+  <!-- Result State -->
+  <div id="resultState" style="display:none;">
+    <div class="icon" id="resultIcon" style="background:#16a34a;">
+      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <h2 class="title" id="resultTitle"></h2>
+    <p class="message" id="resultMessage"></p>
+    <p class="hint">You can close this window.</p>
+  </div>
+
+  <!-- Vacation Picker State -->
+  <div id="vacationState" style="display:none;">
+    <div class="icon" style="background:#16a34a;">
+      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+        <line x1="16" y1="2" x2="16" y2="6"></line>
+        <line x1="8" y1="2" x2="8" y2="6"></line>
+        <line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+    </div>
+    <h2 class="title" id="vacationTitle">Log Vacation</h2>
+    <p class="message" id="vacationMsg">Select the vacation date range.</p>
+    <div class="vacation-form" id="vacationForm" style="display:block; margin-top:20px;">
+      <div class="form-group">
+        <label class="form-label">Start Date</label>
+        <input type="date" id="vacStart" class="form-input">
+      </div>
+      <div class="form-group">
+        <label class="form-label">End Date</label>
+        <input type="date" id="vacEnd" class="form-input">
+      </div>
+      <button class="btn-submit" id="vacSubmitBtn" onclick="submitVacation()">
+        <div class="btn-spin"></div>
+        <span class="btn-text">Submit Vacation</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div id="errorState" style="display:none;">
+    <div class="icon" style="background:#dc2626;">
+      <svg viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </div>
+    <h2 class="title" id="errorTitle">Error</h2>
+    <p class="message" id="errorMessage"></p>
+    <p class="hint">You can close this window.</p>
+  </div>
+</div>
+
+<script>
+  var params = new URLSearchParams(window.location.search);
+  var API_BASE = params.get('api') || '';
+  var ACTION = params.get('action') || '';
+  var TOKEN = params.get('token') || '';
+
+  function apiCall(endpoint, callback) {
+    var url = API_BASE + (API_BASE.indexOf('?') > -1 ? '&' : '?') + endpoint;
+    fetch(url, { redirect: 'follow' })
+      .then(function(r) { return r.json(); })
+      .then(callback)
+      .catch(function(e) { showError('Connection failed: ' + e.message); });
+  }
+
+  function showResult(title, message, color) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('vacationState').style.display = 'none';
+    document.getElementById('resultIcon').style.background = color || '#16a34a';
+    document.getElementById('resultTitle').textContent = title;
+    document.getElementById('resultMessage').textContent = message;
+    document.getElementById('resultState').style.display = 'block';
+  }
+
+  function showError(message) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('vacationState').style.display = 'none';
+    document.getElementById('errorTitle').textContent = 'Error';
+    document.getElementById('errorMessage').textContent = message;
+    document.getElementById('errorState').style.display = 'block';
+  }
+
+  function showVacationPicker(name, date, token) {
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('vacationTitle').textContent = 'Log Vacation for ' + name;
+    document.getElementById('vacStart').value = date;
+    document.getElementById('vacEnd').value = date;
+    document.getElementById('vacationState').style.display = 'block';
+  }
+
+  function submitVacation() {
+    var s = document.getElementById('vacStart').value;
+    var e = document.getElementById('vacEnd').value;
+    if (!s || !e) { alert('Please select both dates'); return; }
+    if (e < s) { alert('End date must be after start date'); return; }
+
+    var btn = document.getElementById('vacSubmitBtn');
+    btn.classList.add('loading'); btn.disabled = true;
+
+    var endpoint = 'page=tc-api-alert-action&action=submit-vacation&token=' +
+      encodeURIComponent(TOKEN) + '&startDate=' + encodeURIComponent(s) + '&endDate=' + encodeURIComponent(e);
+
+    apiCall(endpoint, function(r) {
+      btn.classList.remove('loading'); btn.disabled = false;
+      if (r && r.title) {
+        showResult(r.title, r.message, r.color);
+      } else if (r && r._error) {
+        showError(r._error);
+      } else {
+        showError('Unexpected response from server.');
+      }
+    });
+  }
+
+  // ========== INIT: Fire API call immediately ==========
+  (function() {
+    if (!API_BASE || !ACTION || !TOKEN) {
+      showError('Invalid link. Missing required parameters.');
+      return;
+    }
+
+    var endpoint = 'page=tc-api-alert-action&action=' + encodeURIComponent(ACTION) +
+      '&token=' + encodeURIComponent(TOKEN);
+
+    apiCall(endpoint, function(r) {
+      if (!r) { showError('No response from server.'); return; }
+
+      // Vacation picker
+      if (r.vacationPicker) {
+        showVacationPicker(r.name || '', r.date || '', r.token || TOKEN);
+        return;
+      }
+
+      // Normal result
+      if (r.title) {
+        showResult(r.title, r.message, r.color);
+        return;
+      }
+
+      if (r._error) { showError(r._error); return; }
+      showError('Unexpected response from server.');
+    });
+  })();
+</script>
+
+</body>
+</html>
