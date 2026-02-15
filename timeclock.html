@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Employee Time Clock</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #f3f4f6; min-height: 100vh; display: flex; align-items: center;
+      justify-content: center; padding: 20px;
+    }
+    .container { width: 100%; max-width: 480px; }
+    .card { background: white; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border: 1px solid #e5e7eb; overflow: hidden; }
+    .card-header { background: #2c3e50; color: white; padding: 28px 32px; text-align: center; }
+    .card-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+    .card-header p { font-size: 14px; opacity: 0.8; }
+    .card-body { padding: 32px; }
+    .time-display { text-align: center; margin-bottom: 28px; padding: 16px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+    .time-display .current-time { font-size: 32px; font-weight: 700; color: #111827; letter-spacing: 1px; }
+    .time-display .current-date { font-size: 14px; color: #6b7280; margin-top: 4px; }
+    .form-group { margin-bottom: 24px; }
+    .form-label { display: block; font-size: 14px; font-weight: 600; color: #374151; margin-bottom: 10px; }
+    .radio-group { display: flex; gap: 12px; }
+    .radio-option { flex: 1; position: relative; }
+    .radio-option input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
+    .radio-option label {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      padding: 14px 16px; border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer;
+      font-size: 15px; font-weight: 600; color: #374151; transition: all 0.2s; text-align: center;
+    }
+    .radio-option label svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2; fill: none; flex-shrink: 0; }
+    .radio-option input[type="radio"]:checked + label { border-color: #2563eb; background: #eff6ff; color: #1d4ed8; }
+    .radio-option label:hover { border-color: #d1d5db; background: #f9fafb; }
+    .radio-option input[type="radio"]:checked + label:hover { border-color: #2563eb; background: #eff6ff; }
+    .form-select {
+      width: 100%; padding: 12px 16px; border: 2px solid #e5e7eb; border-radius: 10px;
+      font-size: 15px; color: #374151; background: white; appearance: none; cursor: pointer;
+      transition: border-color 0.2s;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 40px;
+    }
+    .form-select:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .btn-submit {
+      width: 100%; padding: 14px 24px; background: #2563eb; color: white; border: none;
+      border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer;
+      transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-submit:hover { background: #1d4ed8; }
+    .btn-submit:disabled { background: #9ca3af; cursor: not-allowed; }
+    .btn-submit .btn-spinner {
+      display: none; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.4);
+      border-top: 2px solid white; border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    .btn-submit.loading .btn-spinner { display: inline-block; }
+    .btn-submit.loading .btn-label { display: none; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .btn-history {
+      width: 100%; margin-top: 12px; padding: 12px; background: none; border: 2px solid #e5e7eb;
+      border-radius: 10px; font-size: 14px; font-weight: 600; color: #6b7280; cursor: pointer; transition: all 0.2s;
+    }
+    .btn-history:hover { border-color: #d1d5db; background: #f9fafb; }
+    .company-footer { text-align: center; margin-top: 24px; font-size: 12px; color: #9ca3af; }
+    .emp-loading { text-align: center; padding: 8px; font-size: 13px; color: #9ca3af; display: none; }
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-card {
+      background: white; border-radius: 16px; padding: 32px; width: 90%; max-width: 400px;
+      text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+    .modal-icon { width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; }
+    .modal-icon svg { width: 32px; height: 32px; stroke-width: 2.5; fill: none; }
+    .modal-icon.success { background: #dcfce7; }
+    .modal-icon.success svg { stroke: #16a34a; }
+    .modal-icon.error { background: #fee2e2; }
+    .modal-icon.error svg { stroke: #dc2626; }
+    .modal-detail { color: #64748b; font-size: 14px; margin-top: 4px; }
+    .modal-timestamp { color: #94a3b8; font-size: 13px; margin-top: 8px; }
+    .btn-modal-close {
+      margin-top: 20px; padding: 12px 32px; background: #2c3e50; color: white; border: none;
+      border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; width: 100%;
+    }
+    .history-modal .modal-card { max-width: 460px; max-height: 80vh; display: flex; flex-direction: column; text-align: left; }
+    .history-modal h3 { text-align: center; margin-bottom: 16px; }
+    .history-table { overflow-y: auto; flex: 1; }
+    .history-table table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .history-table th { text-align: left; padding: 8px 10px; border-bottom: 2px solid #e5e7eb; color: #6b7280; font-weight: 600; background: #f9fafb; position: sticky; top: 0; }
+    .history-table td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; }
+    .conn-error { display: none; text-align: center; padding: 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; margin-bottom: 16px; font-size: 13px; color: #991b1b; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card">
+      <div class="card-header">
+        <h1 id="companyName">Employee Time Clock</h1>
+        <p>Employee Time Clock</p>
+      </div>
+      <div class="card-body">
+        <div class="time-display">
+          <div class="current-time" id="liveTime">--:--:-- --</div>
+          <div class="current-date" id="liveDate">Loading...</div>
+        </div>
+
+        <div class="conn-error" id="connError">Unable to connect to server. Please check your internet connection and refresh.</div>
+
+        <div class="form-group">
+          <div class="form-label">Your Name</div>
+          <select id="employeeSelect" class="form-select">
+            <option value="">Loading employees...</option>
+          </select>
+          <div class="emp-loading" id="empLoading">Loading employees...</div>
+        </div>
+
+        <div class="form-group">
+          <div class="form-label">What are you doing?</div>
+          <div class="radio-group">
+            <div class="radio-option">
+              <input type="radio" id="actionStart" name="clockAction" value="Start Working">
+              <label for="actionStart">
+                <svg viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path></svg>
+                Start Working
+              </label>
+            </div>
+            <div class="radio-option">
+              <input type="radio" id="actionEnd" name="clockAction" value="Ok, See You">
+              <label for="actionEnd">
+                <svg viewBox="0 0 24 24"><path d="M18.36 6.64a9 9 0 1 1-12.73 0"></path><line x1="12" y1="2" x2="12" y2="12"></line></svg>
+                Ok, See You
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-submit" id="submitBtn" onclick="handleSubmit()">
+          <div class="btn-spinner"></div>
+          <span class="btn-label">Submit</span>
+        </button>
+
+        <button class="btn-history" onclick="openHistory()">View My History</button>
+      </div>
+    </div>
+    <div class="company-footer" id="footerText">Employee Management System</div>
+  </div>
+
+  <!-- Success Modal -->
+  <div class="modal-overlay" id="successModal">
+    <div class="modal-card">
+      <div class="modal-icon success">
+        <svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"></path></svg>
+      </div>
+      <h3 id="successTitle">Clocked In!</h3>
+      <p class="modal-detail" id="successName"></p>
+      <p class="modal-detail" id="successAction"></p>
+      <p class="modal-timestamp" id="successTime"></p>
+      <button class="btn-modal-close" onclick="closeSuccessModal()">OK</button>
+    </div>
+  </div>
+
+  <!-- Error Modal -->
+  <div class="modal-overlay" id="errorModal">
+    <div class="modal-card">
+      <div class="modal-icon error">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+      </div>
+      <h3>Error</h3>
+      <p id="errorModalMessage" style="color: #dc2626;">Something went wrong</p>
+      <button class="btn-modal-close" onclick="closeErrorModal()">OK</button>
+    </div>
+  </div>
+
+  <!-- History Modal -->
+  <div class="modal-overlay history-modal" id="historyModal">
+    <div class="modal-card">
+      <h3>My Clock History</h3>
+      <select id="historySelect" class="form-select" style="margin-bottom:16px;" onchange="loadHistory()">
+        <option value="">Select your name...</option>
+      </select>
+      <div id="historyLoading" style="display:none;text-align:center;padding:20px;color:#6b7280;">Loading...</div>
+      <div id="historyEmpty" style="display:none;text-align:center;padding:20px;color:#9ca3af;font-size:14px;">No entries found in the last 30 days.</div>
+      <div id="historyTable" class="history-table" style="display:none;">
+        <table>
+          <thead><tr><th>Date</th><th>Time</th><th>Action</th></tr></thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+      <button class="btn-modal-close" style="margin-top:16px;" onclick="closeHistory()">Close</button>
+    </div>
+  </div>
+
+  <script>
+    // Get API base URL from query parameter
+    var params = new URLSearchParams(window.location.search);
+    var API_BASE = params.get('api') || '';
+    var employeesData = [];
+
+    // ========== INIT ==========
+    (function init() {
+      startClock();
+      if (API_BASE) {
+        loadEmployees();
+      } else {
+        document.getElementById('connError').style.display = 'block';
+        document.getElementById('connError').textContent = 'Missing API configuration. Contact your administrator.';
+        document.getElementById('employeeSelect').innerHTML = '<option value="">Not available</option>';
+      }
+    })();
+
+    // ========== LIVE CLOCK ==========
+    function startClock() { updateClock(); setInterval(updateClock, 1000); }
+    function updateClock() {
+      var now = new Date();
+      var h = now.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12; if (h === 0) h = 12;
+      var m = String(now.getMinutes()).padStart(2, '0');
+      var s = String(now.getSeconds()).padStart(2, '0');
+      document.getElementById('liveTime').textContent = h + ':' + m + ':' + s + ' ' + ampm;
+      var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      document.getElementById('liveDate').textContent = days[now.getDay()] + ', ' + months[now.getMonth()] + ' ' + now.getDate() + ', ' + now.getFullYear();
+    }
+
+    // ========== API HELPER ==========
+    function apiCall(endpoint, callback) {
+      var url = API_BASE + (API_BASE.indexOf('?') > -1 ? '&' : '?') + endpoint;
+      fetch(url, { redirect: 'follow' })
+        .then(function(r) { return r.json(); })
+        .then(callback)
+        .catch(function(e) {
+          // Fallback: try JSONP style
+          var cb = '_cb_' + Date.now();
+          window[cb] = function(data) { callback(data); delete window[cb]; };
+          // If fetch fails, show error
+          document.getElementById('connError').style.display = 'block';
+          callback({ _error: 'Connection failed: ' + e.message });
+        });
+    }
+
+    // ========== LOAD EMPLOYEES ==========
+    function loadEmployees() {
+      apiCall('page=tc-api-employees', function(response) {
+        if (response && response._error) {
+          document.getElementById('connError').style.display = 'block';
+          document.getElementById('connError').textContent = response._error;
+          return;
+        }
+
+        employeesData = (response && response.employees) ? response.employees : [];
+        var select = document.getElementById('employeeSelect');
+        select.innerHTML = '<option value="">Select your name...</option>';
+
+        if (employeesData.length === 0) {
+          select.innerHTML = '<option value="">No employees found</option>';
+          return;
+        }
+
+        for (var i = 0; i < employeesData.length; i++) {
+          var opt = document.createElement('option');
+          opt.value = employeesData[i].email;
+          opt.textContent = employeesData[i].name;
+          select.appendChild(opt);
+        }
+
+        // Set company name if available
+        if (response.companyName) {
+          document.getElementById('companyName').textContent = response.companyName;
+          document.getElementById('footerText').textContent = response.companyName + ' \u2022 Employee Management System';
+        }
+      });
+    }
+
+    // ========== SUBMIT ==========
+    function handleSubmit() {
+      var actionEl = document.querySelector('input[name="clockAction"]:checked');
+      if (!actionEl) { showErrorModal('Please select an action (Start Working or Ok, See You).'); return; }
+      var select = document.getElementById('employeeSelect');
+      if (!select.value) { showErrorModal('Please select your name.'); return; }
+
+      var employeeName = '';
+      for (var i = 0; i < employeesData.length; i++) {
+        if (employeesData[i].email === select.value) { employeeName = employeesData[i].name; break; }
+      }
+
+      var btn = document.getElementById('submitBtn');
+      btn.classList.add('loading'); btn.disabled = true;
+
+      // Show optimistic success
+      var now = new Date();
+      var h = now.getHours(), ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12; if (h === 0) h = 12;
+      var m = String(now.getMinutes()).padStart(2, '0');
+      var s = String(now.getSeconds()).padStart(2, '0');
+      var mo = String(now.getMonth() + 1).padStart(2, '0');
+      var dy = String(now.getDate()).padStart(2, '0');
+      var localTime = mo + '/' + dy + '/' + now.getFullYear() + ' ' + h + ':' + m + ':' + s + ' ' + ampm;
+
+      btn.classList.remove('loading'); btn.disabled = false;
+      showSuccessModal(employeeName, actionEl.value, localTime);
+
+      var endpoint = 'page=tc-api-submit&name=' + encodeURIComponent(employeeName) +
+        '&email=' + encodeURIComponent(select.value) +
+        '&action=' + encodeURIComponent(actionEl.value);
+
+      apiCall(endpoint, function(response) {
+        if (response && response._error) {
+          if (response._duplicate) {
+            document.getElementById('successTitle').textContent = "You're All Set!";
+            document.getElementById('successAction').textContent = response._error;
+          } else {
+            document.getElementById('successModal').style.display = 'none';
+            showErrorModal(response._error);
+          }
+        }
+      });
+    }
+
+    // ========== MODALS ==========
+    function showSuccessModal(name, action, timestamp) {
+      document.getElementById('successTitle').textContent = action === 'Start Working' ? 'Clocked In!' : 'Clocked Out!';
+      document.getElementById('successName').textContent = name;
+      document.getElementById('successAction').textContent = action;
+      document.getElementById('successTime').textContent = timestamp;
+      document.getElementById('successModal').style.display = 'flex';
+    }
+    function closeSuccessModal() {
+      document.getElementById('successModal').style.display = 'none';
+      document.getElementById('employeeSelect').value = '';
+      var checked = document.querySelector('input[name="clockAction"]:checked');
+      if (checked) checked.checked = false;
+    }
+    function showErrorModal(msg) {
+      document.getElementById('errorModalMessage').textContent = msg;
+      document.getElementById('errorModal').style.display = 'flex';
+    }
+    function closeErrorModal() { document.getElementById('errorModal').style.display = 'none'; }
+
+    // ========== HISTORY ==========
+    function openHistory() {
+      var sel = document.getElementById('historySelect');
+      if (sel.options.length <= 1) {
+        sel.innerHTML = '<option value="">Select your name...</option>';
+        for (var i = 0; i < employeesData.length; i++) {
+          var opt = document.createElement('option');
+          opt.value = employeesData[i].email;
+          opt.textContent = employeesData[i].name;
+          sel.appendChild(opt);
+        }
+      }
+      sel.value = '';
+      document.getElementById('historyLoading').style.display = 'none';
+      document.getElementById('historyEmpty').style.display = 'none';
+      document.getElementById('historyTable').style.display = 'none';
+      document.getElementById('historyModal').style.display = 'flex';
+    }
+    function loadHistory() {
+      var email = document.getElementById('historySelect').value;
+      if (!email) return;
+      document.getElementById('historyLoading').style.display = 'block';
+      document.getElementById('historyEmpty').style.display = 'none';
+      document.getElementById('historyTable').style.display = 'none';
+
+      apiCall('page=tc-api-history&email=' + encodeURIComponent(email), function(r) {
+        document.getElementById('historyLoading').style.display = 'none';
+        var entries = (r && r.entries) ? r.entries : [];
+        if (entries.length === 0) {
+          document.getElementById('historyEmpty').style.display = 'block';
+          document.getElementById('historyEmpty').textContent = 'No entries found in the last 30 days.';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < entries.length; i++) {
+          var color = entries[i].action === 'Start Working' ? '#16a34a' : '#dc2626';
+          html += '<tr><td>' + entries[i].date + '</td><td>' + entries[i].time + '</td>';
+          html += '<td style="color:' + color + ';font-weight:600;">' + entries[i].action + '</td></tr>';
+        }
+        document.getElementById('historyBody').innerHTML = html;
+        document.getElementById('historyTable').style.display = 'block';
+      });
+    }
+    function closeHistory() { document.getElementById('historyModal').style.display = 'none'; }
+  </script>
+</body>
+</html>
