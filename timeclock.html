@@ -83,6 +83,17 @@
     .modal-icon.warning svg .exc { stroke: white; stroke-width: 2.5; }
     .modal-icon.denied { background: #fee2e2; }
     .modal-icon.denied svg { stroke: #dc2626; }
+    .att-dates-list { text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin: 12px 0; font-size: 13px; color: #334155; }
+    .att-dates-list .att-date { padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
+    .att-dates-list .att-date:last-child { border-bottom: none; }
+    .att-radio-group { text-align: left; margin: 16px 0; }
+    .att-radio-group label { display: block; padding: 12px 16px; margin-bottom: 8px; background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.2s; }
+    .att-radio-group input[type="radio"] { margin-right: 10px; accent-color: #2563eb; }
+    .att-radio-group label:has(input:checked) { border-color: #2563eb; background: #eff6ff; }
+    .att-vacation-badge { display: inline-block; background: #dcfce7; color: #166534; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; margin: 8px 0; }
+    .att-textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; resize: vertical; min-height: 80px; font-family: inherit; box-sizing: border-box; }
+    .att-textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .att-required { color: #dc2626; font-size: 12px; margin-top: 4px; display: none; }
     .modal-detail { color: #64748b; font-size: 14px; margin-top: 4px; }
     .modal-timestamp { color: #94a3b8; font-size: 13px; margin-top: 8px; }
     .btn-modal-close {
@@ -277,6 +288,52 @@
     </div>
   </div>
 
+  <!-- Attendance: Missed Shift Modal -->
+  <div class="modal-overlay" id="attendanceShiftModal">
+    <div class="modal-card">
+      <div class="modal-icon warning">
+        <svg viewBox="0 0 24 24"><path class="tri" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line class="exc" x1="12" y1="9" x2="12" y2="13"></line><line class="exc" x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </div>
+      <h3 id="attShiftTitle">Missed Shift</h3>
+      <p id="attShiftDesc" style="color:#475569;font-size:14px;"></p>
+      <div id="attShiftDates" class="att-dates-list"></div>
+      <!-- Single day options -->
+      <div id="attShiftOptions" class="att-radio-group">
+        <label><input type="radio" name="attShiftChoice" value="Sick Day"> Sick Day</label>
+        <label><input type="radio" name="attShiftChoice" value="Personal Day"> Personal Day</label>
+      </div>
+      <!-- Multi-day auto vacation -->
+      <div id="attShiftVacation" style="display:none; margin:12px 0;">
+        <span class="att-vacation-badge" id="attVacBadge">Vacation — 0 days</span>
+      </div>
+      <div id="attShiftError" class="att-required">Please select a reason.</div>
+      <button class="btn-correction-submit" id="attShiftSubmitBtn" onclick="submitAttendanceShift()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">Submit & Continue</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Attendance: Late Arrival Modal -->
+  <div class="modal-overlay" id="attendanceLateModal">
+    <div class="modal-card">
+      <div class="modal-icon warning">
+        <svg viewBox="0 0 24 24"><path class="tri" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line class="exc" x1="12" y1="9" x2="12" y2="13"></line><line class="exc" x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      </div>
+      <h3 id="attLateTitle">Late Arrival</h3>
+      <p id="attLateDesc" style="color:#475569;font-size:14px;"></p>
+      <div style="text-align:left;margin:16px 0;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Why are you late?</label>
+        <textarea id="attLateReason" class="att-textarea" placeholder="Please explain the reason for being late..."></textarea>
+        <div id="attLateError" class="att-required">Please provide a reason.</div>
+      </div>
+      <button class="btn-correction-submit" id="attLateSubmitBtn" onclick="submitAttendanceLate()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">Submit & Clock In</span>
+      </button>
+    </div>
+  </div>
+
   <!-- History Modal -->
   <div class="modal-overlay history-modal" id="historyModal">
     <div class="modal-card">
@@ -442,7 +499,36 @@
         return;
       }
 
-      // ---- 2. MISSED CLOCK-OUT CHECK (instant) ----
+      // ---- 1b. DENIED MISSED SHIFT RESUBMIT (instant) ----
+      if (emp.deniedMissedShift) {
+        var dms = emp.deniedMissedShift;
+        pendingCorrection.deniedAttendanceId = dms.id;
+        pendingCorrection.missedShiftDates = dms.dates;
+        showMissedShiftModal(dms.dates, true);
+        return;
+      }
+
+      // ---- 1c. DENIED LATE ARRIVAL RESUBMIT (instant) ----
+      if (emp.deniedLateArrival && actionEl.value === 'Start Working') {
+        var dla = emp.deniedLateArrival;
+        pendingCorrection.deniedAttendanceId = dla.id;
+        pendingCorrection.lateDates = [dla.date || today];
+        showLateArrivalModal(emp, true, dla.reason || '');
+        return;
+      }
+
+      // ---- 2. MISSED SHIFT CHECK (instant) ----
+      if (emp.missedShifts && emp.missedShifts.length > 0) {
+        var dates = [];
+        for (var ms = 0; ms < emp.missedShifts.length; ms++) {
+          dates.push(emp.missedShifts[ms].date);
+        }
+        pendingCorrection.missedShiftDates = dates;
+        showMissedShiftModal(emp.missedShifts, false);
+        return;
+      }
+
+      // ---- 3. MISSED CLOCK-OUT CHECK (instant) ----
       if (actionEl.value === 'Start Working' && emp.lastAction === 'Start Working' && emp.lastDate && emp.lastDate < today) {
         pendingCorrection.missedDate = emp.lastDate;
         document.getElementById('missedCODate').textContent = emp.lastDateFormatted || emp.lastDate;
@@ -452,7 +538,7 @@
         return;
       }
 
-      // ---- 3. MISSED CLOCK-IN CHECK (instant) ----
+      // ---- 4. MISSED CLOCK-IN CHECK (instant) ----
       if (actionEl.value === 'Ok, See You' && !emp.hasTodayClockIn) {
         pendingCorrection.todayDate = today;
         var todayObj = new Date();
@@ -464,7 +550,17 @@
         return;
       }
 
-      // ---- 4. DUPLICATE CHECK (instant) ----
+      // ---- 5. LATE ARRIVAL CHECK (instant) ----
+      if (actionEl.value === 'Start Working' && emp.scheduledStartToday && !emp.pendingLateToday) {
+        var lateMinutes = calcLateMinutes(emp.scheduledStartToday);
+        if (lateMinutes >= 30) {
+          pendingCorrection.lateDates = [today];
+          showLateArrivalModal(emp, false, '');
+          return;
+        }
+      }
+
+      // ---- 6. DUPLICATE CHECK (instant) ----
       if (emp.lastAction === actionEl.value && emp.lastDate === today) {
         var lastAction = actionEl.value === 'Start Working' ? 'clocked in' : 'clocked out';
         showSuccessModal(emp.name, actionEl.value, '');
@@ -474,17 +570,21 @@
         return;
       }
 
-      // ---- 5. CLEAN PUNCH — optimistic success + fire server ----
-      showSuccessModal(emp.name, actionEl.value, localTimeStr());
+      // ---- 7. CLEAN PUNCH — optimistic success + fire server ----
+      executeCleanPunch(emp, actionEl.value);
+    }
 
-      // Update local state immediately
-      emp.lastAction = actionEl.value;
+    function executeCleanPunch(emp, action) {
+      var today = getTodayStr();
+      showSuccessModal(emp.name, action, localTimeStr());
+
+      emp.lastAction = action;
       emp.lastDate = today;
-      if (actionEl.value === 'Start Working') emp.hasTodayClockIn = true;
+      if (action === 'Start Working') emp.hasTodayClockIn = true;
 
       var endpoint = 'page=tc-api-submit&name=' + encodeURIComponent(emp.name) +
         '&email=' + encodeURIComponent(emp.email) +
-        '&action=' + encodeURIComponent(actionEl.value);
+        '&action=' + encodeURIComponent(action);
 
       apiCall(endpoint, function(response) {
         if (!response) return;
@@ -496,6 +596,166 @@
         if (response.timestamp) {
           document.getElementById('successTime').textContent = response.timestamp;
         }
+      });
+    }
+
+    // ========== ATTENDANCE: LATE ARRIVAL HELPERS ==========
+    function calcLateMinutes(scheduledStart) {
+      if (!scheduledStart) return 0;
+      var parts = scheduledStart.match(/(\d{1,2}):(\d{2})/);
+      if (!parts) return 0;
+      var schedH = parseInt(parts[1], 10);
+      var schedM = parseInt(parts[2], 10);
+      var now = new Date();
+      var nowMins = now.getHours() * 60 + now.getMinutes();
+      var schedMins = schedH * 60 + schedM;
+      return nowMins - schedMins;
+    }
+
+    function showLateArrivalModal(emp, isDenied, prefillReason) {
+      var title = isDenied ? 'Late Report Not Approved' : 'Late Arrival';
+      var desc = isDenied
+        ? 'Your previous late arrival report was not approved. Please provide an updated reason.'
+        : 'You are ' + calcLateMinutes(emp.scheduledStartToday) + ' minutes past your ' + emp.scheduledStartToday + ' scheduled start.';
+      document.getElementById('attLateTitle').textContent = title;
+      document.getElementById('attLateDesc').textContent = desc;
+      document.getElementById('attLateReason').value = prefillReason || '';
+      document.getElementById('attLateError').style.display = 'none';
+      document.getElementById('attendanceLateModal').style.display = 'flex';
+    }
+
+    function submitAttendanceLate() {
+      var reason = document.getElementById('attLateReason').value.trim();
+      if (!reason) {
+        document.getElementById('attLateError').style.display = 'block';
+        return;
+      }
+      document.getElementById('attLateError').style.display = 'none';
+      var btn = document.getElementById('attLateSubmitBtn');
+      btn.classList.add('loading'); btn.disabled = true;
+
+      var dates = pendingCorrection.lateDates || [getTodayStr()];
+      var endpoint = 'page=tc-api-attendance' +
+        '&email=' + encodeURIComponent(pendingCorrection.email) +
+        '&name=' + encodeURIComponent(pendingCorrection.name) +
+        '&type=late_arrival' +
+        '&dates=' + encodeURIComponent(JSON.stringify(dates)) +
+        '&reason=' + encodeURIComponent(reason);
+      if (pendingCorrection.deniedAttendanceId) {
+        endpoint += '&deniedId=' + pendingCorrection.deniedAttendanceId;
+      }
+
+      apiCall(endpoint, function(r) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        document.getElementById('attendanceLateModal').style.display = 'none';
+        if (r && r._error) { showErrorModal(r._error); return; }
+
+        // Mark as handled so it won't trigger again
+        var emp = findEmployee(pendingCorrection.email);
+        if (emp) {
+          emp.pendingLateToday = true;
+          emp.deniedLateArrival = null;
+        }
+        try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
+
+        // Now proceed with the actual clock action
+        if (pendingCorrection.action === 'Start Working') {
+          executeCleanPunch(emp, 'Start Working');
+        }
+      });
+    }
+
+    // ========== ATTENDANCE: MISSED SHIFT HELPERS ==========
+    function formatDateForDisplay(dateStr) {
+      var d = new Date(dateStr + 'T12:00:00');
+      if (isNaN(d.getTime())) return dateStr;
+      var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate();
+    }
+
+    function showMissedShiftModal(missedData, isDenied) {
+      // missedData can be [{date, dayName},...] or just ['yyyy-MM-dd',...]
+      var dates = [];
+      var datesHtml = '';
+      for (var i = 0; i < missedData.length; i++) {
+        var dateStr = missedData[i].date || missedData[i];
+        var dayName = missedData[i].dayName || '';
+        dates.push(dateStr);
+        datesHtml += '<div class="att-date">' + (dayName ? dayName + ' — ' : '') + formatDateForDisplay(dateStr) + '</div>';
+      }
+      pendingCorrection.missedShiftDates = dates;
+
+      var title = isDenied ? 'Missed Shift Report Not Approved' : 'Missed Shift' + (dates.length > 1 ? 's' : '');
+      var desc = isDenied
+        ? 'Your previous report was not approved. Please resubmit.'
+        : 'You missed ' + dates.length + ' scheduled shift' + (dates.length > 1 ? 's' : '') + ' since your last punch:';
+
+      document.getElementById('attShiftTitle').textContent = title;
+      document.getElementById('attShiftDesc').textContent = desc;
+      document.getElementById('attShiftDates').innerHTML = datesHtml;
+      document.getElementById('attShiftError').style.display = 'none';
+
+      // Multi-day: auto-select Vacation
+      if (dates.length > 1) {
+        document.getElementById('attShiftOptions').style.display = 'none';
+        document.getElementById('attShiftVacation').style.display = 'block';
+        document.getElementById('attVacBadge').textContent = 'Vacation — ' + dates.length + ' day' + (dates.length > 1 ? 's' : '');
+      } else {
+        document.getElementById('attShiftOptions').style.display = 'block';
+        document.getElementById('attShiftVacation').style.display = 'none';
+        // Clear previous selection
+        var radios = document.querySelectorAll('input[name="attShiftChoice"]');
+        for (var r = 0; r < radios.length; r++) radios[r].checked = false;
+      }
+
+      document.getElementById('attendanceShiftModal').style.display = 'flex';
+    }
+
+    function submitAttendanceShift() {
+      var dates = pendingCorrection.missedShiftDates || [];
+      var selection = '';
+
+      if (dates.length > 1) {
+        selection = 'Vacation';
+      } else {
+        var checked = document.querySelector('input[name="attShiftChoice"]:checked');
+        if (!checked) {
+          document.getElementById('attShiftError').style.display = 'block';
+          return;
+        }
+        selection = checked.value;
+      }
+      document.getElementById('attShiftError').style.display = 'none';
+
+      var btn = document.getElementById('attShiftSubmitBtn');
+      btn.classList.add('loading'); btn.disabled = true;
+
+      var endpoint = 'page=tc-api-attendance' +
+        '&email=' + encodeURIComponent(pendingCorrection.email) +
+        '&name=' + encodeURIComponent(pendingCorrection.name) +
+        '&type=missed_shift' +
+        '&dates=' + encodeURIComponent(JSON.stringify(dates)) +
+        '&selection=' + encodeURIComponent(selection);
+      if (pendingCorrection.deniedAttendanceId) {
+        endpoint += '&deniedId=' + pendingCorrection.deniedAttendanceId;
+      }
+
+      apiCall(endpoint, function(r) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        document.getElementById('attendanceShiftModal').style.display = 'none';
+        if (r && r._error) { showErrorModal(r._error); return; }
+
+        // Mark as handled
+        var emp = findEmployee(pendingCorrection.email);
+        if (emp) {
+          emp.missedShifts = [];
+          emp.deniedMissedShift = null;
+        }
+        try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
+
+        // Now re-enter handleSubmit flow for remaining checks
+        handleSubmit();
       });
     }
 
