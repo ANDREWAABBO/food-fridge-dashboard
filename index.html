@@ -207,18 +207,33 @@
       
       // ====================================================================
       // STORAGE BRIDGE — Persist iframe localStorage in wrapper's stable origin
-      // Each client gets a unique prefix so multiple clients don't collide.
+      // Uses a fixed prefix. No per-client hash — the wrapper serves one app.
       // ====================================================================
-      function simpleHash(str) {
-        var hash = 0;
-        for (var i = 0; i < str.length; i++) {
-          hash = ((hash << 5) - hash) + str.charCodeAt(i);
-          hash = hash & hash;
-        }
-        return Math.abs(hash).toString(36).substring(0, 8);
-      }
+      var storagePrefix = '_sb_';
       
-      var storagePrefix = '_sb_' + simpleHash(baseScriptUrl) + '_';
+      // One-time cleanup: migrate any old hash-prefixed keys to the new fixed prefix
+      (function() {
+        var oldKeys = [];
+        for (var i = 0; i < localStorage.length; i++) {
+          var k = localStorage.key(i);
+          // Old format: _sb_XXXXXXXX_ (8-char hash between underscores)
+          if (k && /^_sb_[a-z0-9]{2,8}_/.test(k) && k.indexOf('_sb__') !== 0) {
+            oldKeys.push(k);
+          }
+        }
+        oldKeys.forEach(function(oldKey) {
+          // Extract the original key after the hash prefix
+          var parts = oldKey.match(/^_sb_[a-z0-9]{2,8}_(.+)$/);
+          if (parts && parts[1]) {
+            var newKey = '_sb_' + parts[1];
+            // Only migrate if new key doesn't already exist
+            if (!localStorage.getItem(newKey)) {
+              localStorage.setItem(newKey, localStorage.getItem(oldKey));
+            }
+            localStorage.removeItem(oldKey);
+          }
+        });
+      })();
       
       // Collect all prefixed keys for this client from wrapper localStorage
       function getStorageForClient() {
