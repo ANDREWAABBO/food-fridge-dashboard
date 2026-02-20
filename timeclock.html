@@ -716,7 +716,7 @@
       var btn = document.getElementById('pinCreateSubmitBtn');
       btn.classList.add('loading'); btn.disabled = true;
 
-      apiCall('page=tc-api-create-pin&email=' + encodeURIComponent(pendingCorrection.email) + '&pin=' + encodeURIComponent(pin1), function(r) {
+      apiCall('page=tc-api-create-pin&email=' + encodeURIComponent(pendingCorrection.email) + '&name=' + encodeURIComponent(pendingCorrection.name) + '&pin=' + encodeURIComponent(pin1), function(r) {
         btn.classList.remove('loading'); btn.disabled = false;
         if (r && r._error) { showErrorModal(r._error); return; }
         if (!r.success) { msg.textContent = r._error || 'Failed to create PIN.'; msg.className = 'pin-message error'; return; }
