@@ -160,6 +160,21 @@
     .lr-badge.time-adj { background: #eff6ff; color: #1e40af; }
     .late-detail-panel { display: none; margin-top: 12px; }
     .late-detail-panel.visible { display: block; }
+
+    /* PIN Modals */
+    .pin-inputs { display: flex; gap: 12px; justify-content: center; margin: 20px 0; }
+    .pin-inputs input {
+      width: 52px; height: 60px; text-align: center; font-size: 24px; font-weight: 700;
+      border: 2px solid #e5e7eb; border-radius: 10px; color: #111827;
+      transition: border-color 0.2s;
+    }
+    .pin-inputs input:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+    .pin-inputs input.pin-error { border-color: #dc2626; }
+    .pin-message { font-size: 13px; min-height: 18px; margin: 4px 0 8px; }
+    .pin-message.error { color: #dc2626; }
+    .pin-message.success { color: #16a34a; }
+    .modal-icon.pin { background: #eff6ff; }
+    .modal-icon.pin svg { width: 28px; height: 28px; stroke: #2563eb; stroke-width: 2; fill: none; }
   </style>
 </head>
 <body>
@@ -369,6 +384,65 @@
     </div>
   </div>
 
+  <!-- PIN Entry Modal -->
+  <div class="modal-overlay" id="pinEntryModal">
+    <div class="modal-card">
+      <div class="modal-icon pin">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+      <h3>Enter Your PIN</h3>
+      <p style="color:#475569;font-size:14px;" id="pinEntryName"></p>
+      <div class="pin-inputs" id="pinEntryInputs">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+      </div>
+      <div class="pin-message" id="pinEntryMessage"></div>
+      <button class="btn-correction-submit" id="pinEntrySubmitBtn" onclick="submitPinEntry()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">Verify</span>
+      </button>
+      <button class="btn-correction-cancel" onclick="closeCorrectionModal('pinEntryModal')">Cancel</button>
+    </div>
+  </div>
+
+  <!-- PIN Creation Modal -->
+  <div class="modal-overlay" id="pinCreateModal">
+    <div class="modal-card">
+      <div class="modal-icon pin">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      </div>
+      <h3>Create Your PIN</h3>
+      <p style="color:#475569;font-size:14px;" id="pinCreateName"></p>
+      <p style="color:#64748b;font-size:13px;margin-top:8px;">Choose a 4-digit PIN you'll use every time you clock in.</p>
+      <div style="text-align:left;margin-top:16px;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Enter PIN</label>
+      </div>
+      <div class="pin-inputs" id="pinCreateInputs1">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+      </div>
+      <div style="text-align:left;">
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Confirm PIN</label>
+      </div>
+      <div class="pin-inputs" id="pinCreateInputs2">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+        <input type="tel" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off">
+      </div>
+      <div class="pin-message" id="pinCreateMessage"></div>
+      <button class="btn-correction-submit" id="pinCreateSubmitBtn" onclick="submitPinCreate()">
+        <div class="btn-spinner"></div>
+        <span class="btn-label">Create PIN & Continue</span>
+      </button>
+      <button class="btn-correction-cancel" onclick="closeCorrectionModal('pinCreateModal')">Cancel</button>
+    </div>
+  </div>
+
   <!-- History Modal -->
   <div class="modal-overlay history-modal" id="historyModal">
     <div class="modal-card">
@@ -514,6 +588,52 @@
       return mo + '/' + dy + '/' + now.getFullYear() + ' ' + h + ':' + m + ':' + s + ' ' + ampm;
     }
 
+    // ========== PIN INPUT HELPERS ==========
+    function setupPinInputs(containerId) {
+      var container = document.getElementById(containerId);
+      var inputs = container.querySelectorAll('input');
+      for (var i = 0; i < inputs.length; i++) {
+        inputs[i].value = '';
+        (function(idx) {
+          inputs[idx].addEventListener('input', function() {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value && idx < inputs.length - 1) inputs[idx + 1].focus();
+          });
+          inputs[idx].addEventListener('keydown', function(e) {
+            if (e.key === 'Backspace' && !this.value && idx > 0) {
+              inputs[idx - 1].focus();
+              inputs[idx - 1].value = '';
+            }
+          });
+          inputs[idx].addEventListener('paste', function(e) {
+            e.preventDefault();
+            var paste = (e.clipboardData || window.clipboardData).getData('text').replace(/[^0-9]/g, '');
+            for (var p = 0; p < Math.min(paste.length, inputs.length); p++) {
+              inputs[p].value = paste[p];
+            }
+            var focusIdx = Math.min(paste.length, inputs.length - 1);
+            inputs[focusIdx].focus();
+          });
+        })(i);
+      }
+      inputs[0].focus();
+    }
+
+    function getPinValue(containerId) {
+      var inputs = document.getElementById(containerId).querySelectorAll('input');
+      var val = '';
+      for (var i = 0; i < inputs.length; i++) val += inputs[i].value;
+      return val;
+    }
+
+    function setPinError(containerId, isError) {
+      var inputs = document.getElementById(containerId).querySelectorAll('input');
+      for (var i = 0; i < inputs.length; i++) {
+        if (isError) inputs[i].classList.add('pin-error');
+        else inputs[i].classList.remove('pin-error');
+      }
+    }
+
     // ========== SUBMIT ==========
     function handleSubmit() {
       var actionEl = document.querySelector('input[name="clockAction"]:checked');
@@ -526,6 +646,94 @@
 
       var today = getTodayStr();
       pendingCorrection = { name: emp.name, email: emp.email, action: actionEl.value };
+
+      // ---- PIN CHECK ----
+      if (emp.hasPin) {
+        document.getElementById('pinEntryName').textContent = emp.name;
+        document.getElementById('pinEntryMessage').textContent = '';
+        document.getElementById('pinEntryMessage').className = 'pin-message';
+        setPinError('pinEntryInputs', false);
+        document.getElementById('pinEntryModal').style.display = 'flex';
+        setupPinInputs('pinEntryInputs');
+        return;
+      } else {
+        document.getElementById('pinCreateName').textContent = emp.name;
+        document.getElementById('pinCreateMessage').textContent = '';
+        document.getElementById('pinCreateMessage').className = 'pin-message';
+        document.getElementById('pinCreateModal').style.display = 'flex';
+        setupPinInputs('pinCreateInputs1');
+        setupPinInputs('pinCreateInputs2');
+        return;
+      }
+    }
+
+    function submitPinEntry() {
+      var pin = getPinValue('pinEntryInputs');
+      if (pin.length !== 4) {
+        document.getElementById('pinEntryMessage').textContent = 'Enter all 4 digits.';
+        document.getElementById('pinEntryMessage').className = 'pin-message error';
+        return;
+      }
+
+      var btn = document.getElementById('pinEntrySubmitBtn');
+      btn.classList.add('loading'); btn.disabled = true;
+
+      apiCall('page=tc-api-verify-pin&email=' + encodeURIComponent(pendingCorrection.email) + '&pin=' + encodeURIComponent(pin), function(r) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        if (r && r._error) { showErrorModal(r._error); return; }
+        if (!r.valid) {
+          document.getElementById('pinEntryMessage').textContent = 'Incorrect PIN. Try again.';
+          document.getElementById('pinEntryMessage').className = 'pin-message error';
+          setPinError('pinEntryInputs', true);
+          // Clear inputs for retry
+          var inputs = document.getElementById('pinEntryInputs').querySelectorAll('input');
+          for (var i = 0; i < inputs.length; i++) inputs[i].value = '';
+          inputs[0].focus();
+          return;
+        }
+        document.getElementById('pinEntryModal').style.display = 'none';
+        continueAfterPin();
+      });
+    }
+
+    function submitPinCreate() {
+      var pin1 = getPinValue('pinCreateInputs1');
+      var pin2 = getPinValue('pinCreateInputs2');
+      var msg = document.getElementById('pinCreateMessage');
+
+      if (pin1.length !== 4) {
+        msg.textContent = 'Enter all 4 digits.';
+        msg.className = 'pin-message error';
+        return;
+      }
+      if (pin1 !== pin2) {
+        msg.textContent = 'PINs do not match. Try again.';
+        msg.className = 'pin-message error';
+        setPinError('pinCreateInputs2', true);
+        return;
+      }
+
+      var btn = document.getElementById('pinCreateSubmitBtn');
+      btn.classList.add('loading'); btn.disabled = true;
+
+      apiCall('page=tc-api-create-pin&email=' + encodeURIComponent(pendingCorrection.email) + '&pin=' + encodeURIComponent(pin1), function(r) {
+        btn.classList.remove('loading'); btn.disabled = false;
+        if (r && r._error) { showErrorModal(r._error); return; }
+        if (!r.success) { msg.textContent = r._error || 'Failed to create PIN.'; msg.className = 'pin-message error'; return; }
+        // Update local state
+        var emp = findEmployee(pendingCorrection.email);
+        if (emp) emp.hasPin = true;
+        try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
+        document.getElementById('pinCreateModal').style.display = 'none';
+        continueAfterPin();
+      });
+    }
+
+    // ========== CONTINUE AFTER PIN ==========
+    function continueAfterPin() {
+      var emp = findEmployee(pendingCorrection.email);
+      if (!emp) { showErrorModal('Employee not found.'); return; }
+      var today = getTodayStr();
 
       // ---- 1. DENIED CORRECTION CHECK (instant) ----
       if (emp.deniedCorrection) {
