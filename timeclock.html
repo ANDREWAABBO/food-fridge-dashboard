@@ -83,6 +83,8 @@
     .modal-icon.warning svg .exc { stroke: white; stroke-width: 2.5; }
     .modal-icon.denied { background: #fee2e2; }
     .modal-icon.denied svg { stroke: #dc2626; }
+    .modal-icon.attendance { background: #eff6ff; }
+    .modal-icon.attendance svg { width: 28px; height: 28px; stroke: #2563eb; stroke-width: 2; fill: none; }
     .att-dates-list { text-align: left; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin: 12px 0; font-size: 13px; color: #334155; }
     .att-dates-list .att-date { padding: 4px 0; border-bottom: 1px solid #f1f5f9; }
     .att-dates-list .att-date:last-child { border-bottom: none; }
@@ -142,6 +144,22 @@
       cursor: pointer; margin-top: 8px; transition: all 0.2s;
     }
     .btn-correction-cancel:hover { border-color: #d1d5db; background: #f9fafb; }
+
+    /* Late Arrival Reason Options */
+    .late-reason-options { text-align: left; margin: 16px 0; display: flex; flex-direction: column; gap: 8px; }
+    .late-reason-opt {
+      display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+      border: 2px solid #e5e7eb; border-radius: 10px; cursor: pointer; transition: all 0.2s;
+    }
+    .late-reason-opt:hover { border-color: #bfdbfe; background: #f8fafc; }
+    .late-reason-opt:has(input:checked) { border-color: #2563eb; background: #eff6ff; }
+    .late-reason-opt input[type="radio"] { width: 18px; height: 18px; accent-color: #2563eb; flex-shrink: 0; }
+    .late-reason-opt .lr-name { font-size: 14px; color: #374151; flex: 1; font-weight: 500; }
+    .late-reason-opt .lr-badge { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+    .lr-badge.info { background: #f0fdf4; color: #166534; }
+    .lr-badge.time-adj { background: #eff6ff; color: #1e40af; }
+    .late-detail-panel { display: none; margin-top: 12px; }
+    .late-detail-panel.visible { display: block; }
   </style>
 </head>
 <body>
@@ -297,11 +315,8 @@
       <h3 id="attShiftTitle">Missed Shift</h3>
       <p id="attShiftDesc" style="color:#475569;font-size:14px;"></p>
       <div id="attShiftDates" class="att-dates-list"></div>
-      <!-- Single day options -->
-      <div id="attShiftOptions" class="att-radio-group">
-        <label><input type="radio" name="attShiftChoice" value="Sick Day"> Sick Day</label>
-        <label><input type="radio" name="attShiftChoice" value="Personal Day"> Personal Day</label>
-      </div>
+      <!-- Dynamic reason options -->
+      <div id="attShiftOptions" class="att-radio-group"></div>
       <!-- Multi-day auto vacation -->
       <div id="attShiftVacation" style="display:none; margin:12px 0;">
         <span class="att-vacation-badge" id="attVacBadge">Vacation — 0 days</span>
@@ -317,20 +332,40 @@
   <!-- Attendance: Late Arrival Modal -->
   <div class="modal-overlay" id="attendanceLateModal">
     <div class="modal-card">
-      <div class="modal-icon warning">
-        <svg viewBox="0 0 24 24"><path class="tri" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line class="exc" x1="12" y1="9" x2="12" y2="13"></line><line class="exc" x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+      <div class="modal-icon attendance">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
       </div>
-      <h3 id="attLateTitle">Late Arrival</h3>
+      <h3 id="attLateTitle">Late Arrival Notification</h3>
       <p id="attLateDesc" style="color:#475569;font-size:14px;"></p>
+      <!-- Reason selection -->
       <div style="text-align:left;margin:16px 0;">
-        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:6px;">Why are you late?</label>
-        <textarea id="attLateReason" class="att-textarea" placeholder="Please explain the reason for being late..."></textarea>
-        <div id="attLateError" class="att-required">Please provide a reason.</div>
+        <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">Select your reason:</label>
+        <div id="lateReasonOptions" class="late-reason-options"></div>
       </div>
-      <button class="btn-correction-submit" id="attLateSubmitBtn" onclick="submitAttendanceLate()">
+      <!-- Info-only detail: free text -->
+      <div class="late-detail-panel" id="lateInfoDetail">
+        <div class="time-picker-group" style="margin-top:0;">
+          <label>Please explain:</label>
+          <textarea id="attLateReason" class="att-textarea" placeholder="Please explain the reason for your late arrival..."></textarea>
+        </div>
+      </div>
+      <!-- Time-adjustment detail: time picker + optional notes -->
+      <div class="late-detail-panel" id="lateTimeAdjDetail">
+        <div class="time-picker-group" style="margin-top:0;">
+          <label>What time did you leave?</label>
+          <input type="time" id="lateDepartureTime" class="time-picker-input">
+        </div>
+        <div class="time-picker-group" style="margin-top:8px;">
+          <label>Notes (optional)</label>
+          <textarea id="lateTimeAdjNotes" class="att-textarea" style="min-height:50px;" placeholder="Any additional details..."></textarea>
+        </div>
+      </div>
+      <div id="attLateError" class="att-required">Please provide a reason.</div>
+      <button class="btn-correction-submit" id="attLateSubmitBtn" onclick="submitAttendanceLate()" style="display:none;">
         <div class="btn-spinner"></div>
         <span class="btn-label">Submit & Clock In</span>
       </button>
+      <button class="btn-correction-cancel" onclick="closeCorrectionModal('attendanceLateModal')">Cancel</button>
     </div>
   </div>
 
@@ -359,6 +394,8 @@
     var employeesData = [];
     var TC_EMP_CACHE_KEY = '_cache_tcEmployees';
     var pendingCorrection = {};
+    var lateArrivalReasons = [{ id: 'was_late', name: 'I Was Late', requiresTimeAdjustment: false }];
+    var absenceReasons = ['Sick Day', 'Personal Day', 'Vacation'];
 
     // ========== INIT ==========
     (function init() {
@@ -416,7 +453,7 @@
       }
     }
 
-    var serverToday = ''; // yyyy-MM-dd from server
+    var serverToday = '';
 
     // ========== LOAD EMPLOYEES (Cache-First) ==========
     function loadEmployees() {
@@ -426,6 +463,8 @@
           var parsed = JSON.parse(cached);
           if (parsed && parsed.employees && parsed.employees.length > 0) populateDropdown(parsed.employees, parsed.companyName);
           if (parsed.today) serverToday = parsed.today;
+          if (parsed.lateArrivalReasons && parsed.lateArrivalReasons.length > 0) lateArrivalReasons = parsed.lateArrivalReasons;
+          if (parsed.absenceReasons && parsed.absenceReasons.length > 0) absenceReasons = parsed.absenceReasons;
         }
       } catch(e) {}
 
@@ -439,7 +478,9 @@
         }
         var freshEmployees = (response && response.employees) ? response.employees : [];
         if (response.today) serverToday = response.today;
-        try { localStorage.setItem(TC_EMP_CACHE_KEY, JSON.stringify({ employees: freshEmployees, companyName: response.companyName || '', today: serverToday })); } catch(e) {}
+        if (response.lateArrivalReasons && response.lateArrivalReasons.length > 0) lateArrivalReasons = response.lateArrivalReasons;
+        if (response.absenceReasons && response.absenceReasons.length > 0) absenceReasons = response.absenceReasons;
+        try { localStorage.setItem(TC_EMP_CACHE_KEY, JSON.stringify({ employees: freshEmployees, companyName: response.companyName || '', today: serverToday, lateArrivalReasons: lateArrivalReasons, absenceReasons: absenceReasons })); } catch(e) {}
         populateDropdown(freshEmployees, response.companyName);
       });
     }
@@ -612,57 +653,179 @@
       return nowMins - schedMins;
     }
 
+    function renderLateReasonOptions() {
+      var container = document.getElementById('lateReasonOptions');
+      var html = '';
+      for (var i = 0; i < lateArrivalReasons.length; i++) {
+        var r = lateArrivalReasons[i];
+        var rid = 'lateReason_' + i;
+        var badgeClass = r.requiresTimeAdjustment ? 'time-adj' : 'info';
+        var badgeText = r.requiresTimeAdjustment ? 'Time Adjustment' : 'Info Only';
+        html += '<div class="late-reason-opt" onclick="document.getElementById(\'' + rid + '\').checked=true; onLateReasonSelected(' + i + ');">';
+        html += '<input type="radio" id="' + rid + '" name="lateReasonChoice" value="' + r.id + '" onchange="onLateReasonSelected(' + i + ')">';
+        html += '<span class="lr-name">' + r.name + '</span>';
+        html += '<span class="lr-badge ' + badgeClass + '">' + badgeText + '</span>';
+        html += '</div>';
+      }
+      container.innerHTML = html;
+    }
+
+    function onLateReasonSelected(index) {
+      var r = lateArrivalReasons[index];
+      var infoPanel = document.getElementById('lateInfoDetail');
+      var timePanel = document.getElementById('lateTimeAdjDetail');
+      var submitBtn = document.getElementById('attLateSubmitBtn');
+
+      if (r.requiresTimeAdjustment) {
+        infoPanel.classList.remove('visible');
+        timePanel.classList.add('visible');
+        document.getElementById('lateDepartureTime').value = '';
+        document.getElementById('lateTimeAdjNotes').value = '';
+      } else {
+        timePanel.classList.remove('visible');
+        infoPanel.classList.add('visible');
+        document.getElementById('attLateReason').value = '';
+      }
+      submitBtn.style.display = '';
+      document.getElementById('attLateError').style.display = 'none';
+    }
+
     function showLateArrivalModal(emp, isDenied, prefillReason) {
-      var title = isDenied ? 'Late Report Not Approved' : 'Late Arrival';
+      var lateMin = calcLateMinutes(emp.scheduledStartToday);
+      var title = isDenied ? 'Late Report Not Approved' : 'Late Arrival Notification';
       var desc = isDenied
         ? 'Your previous late arrival report was not approved. Please provide an updated reason.'
-        : 'You are ' + calcLateMinutes(emp.scheduledStartToday) + ' minutes past your ' + emp.scheduledStartToday + ' scheduled start.';
+        : 'You were scheduled at ' + formatScheduleTime(emp.scheduledStartToday) + ' and are ' + lateMin + ' minutes late.';
       document.getElementById('attLateTitle').textContent = title;
       document.getElementById('attLateDesc').textContent = desc;
-      document.getElementById('attLateReason').value = prefillReason || '';
       document.getElementById('attLateError').style.display = 'none';
+
+      // Render configurable reason options
+      renderLateReasonOptions();
+
+      // Hide detail panels and submit button until reason selected
+      document.getElementById('lateInfoDetail').classList.remove('visible');
+      document.getElementById('lateTimeAdjDetail').classList.remove('visible');
+      document.getElementById('attLateSubmitBtn').style.display = 'none';
+
+      // If prefill (denied resubmit), pre-select and show text
+      if (prefillReason) {
+        document.getElementById('attLateReason').value = prefillReason;
+        // Auto-select first info-only reason and show text panel
+        for (var i = 0; i < lateArrivalReasons.length; i++) {
+          if (!lateArrivalReasons[i].requiresTimeAdjustment) {
+            var rid = 'lateReason_' + i;
+            var el = document.getElementById(rid);
+            if (el) { el.checked = true; onLateReasonSelected(i); }
+            break;
+          }
+        }
+      }
+
       document.getElementById('attendanceLateModal').style.display = 'flex';
     }
 
+    function formatScheduleTime(timeStr) {
+      if (!timeStr) return '';
+      var parts = timeStr.match(/(\d{1,2}):(\d{2})/);
+      if (!parts) return timeStr;
+      var h = parseInt(parts[1], 10);
+      var ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12; if (h === 0) h = 12;
+      return h + ':' + parts[2] + ' ' + ampm;
+    }
+
     function submitAttendanceLate() {
-      var reason = document.getElementById('attLateReason').value.trim();
-      if (!reason) {
+      var selected = document.querySelector('input[name="lateReasonChoice"]:checked');
+      if (!selected) {
         document.getElementById('attLateError').style.display = 'block';
+        document.getElementById('attLateError').textContent = 'Please select a reason.';
         return;
       }
-      document.getElementById('attLateError').style.display = 'none';
-      var btn = document.getElementById('attLateSubmitBtn');
-      btn.classList.add('loading'); btn.disabled = true;
 
-      var dates = pendingCorrection.lateDates || [getTodayStr()];
-      var endpoint = 'page=tc-api-attendance' +
-        '&email=' + encodeURIComponent(pendingCorrection.email) +
-        '&name=' + encodeURIComponent(pendingCorrection.name) +
-        '&type=late_arrival' +
-        '&dates=' + encodeURIComponent(JSON.stringify(dates)) +
-        '&reason=' + encodeURIComponent(reason);
-      if (pendingCorrection.deniedAttendanceId) {
-        endpoint += '&deniedId=' + pendingCorrection.deniedAttendanceId;
+      // Find which reason was selected
+      var reasonIndex = -1;
+      for (var i = 0; i < lateArrivalReasons.length; i++) {
+        if (lateArrivalReasons[i].id === selected.value) { reasonIndex = i; break; }
       }
+      if (reasonIndex < 0) { showErrorModal('Invalid reason selected.'); return; }
 
-      apiCall(endpoint, function(r) {
-        btn.classList.remove('loading'); btn.disabled = false;
-        document.getElementById('attendanceLateModal').style.display = 'none';
-        if (r && r._error) { showErrorModal(r._error); return; }
+      var reason = lateArrivalReasons[reasonIndex];
+      var dates = pendingCorrection.lateDates || [getTodayStr()];
 
-        // Mark as handled so it won't trigger again
-        var emp = findEmployee(pendingCorrection.email);
-        if (emp) {
-          emp.pendingLateToday = true;
-          emp.deniedLateArrival = null;
+      if (reason.requiresTimeAdjustment) {
+        // TIME ADJUSTMENT PATH
+        var depTime = document.getElementById('lateDepartureTime').value;
+        if (!depTime) {
+          document.getElementById('attLateError').style.display = 'block';
+          document.getElementById('attLateError').textContent = 'Please enter the time you left.';
+          return;
         }
-        try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
+        document.getElementById('attLateError').style.display = 'none';
+        var notes = document.getElementById('lateTimeAdjNotes').value.trim();
 
-        // Now proceed with the actual clock action
-        if (pendingCorrection.action === 'Start Working') {
-          executeCleanPunch(emp, 'Start Working');
+        var btn = document.getElementById('attLateSubmitBtn');
+        btn.classList.add('loading'); btn.disabled = true;
+
+        var endpoint = 'page=tc-api-attendance' +
+          '&email=' + encodeURIComponent(pendingCorrection.email) +
+          '&name=' + encodeURIComponent(pendingCorrection.name) +
+          '&type=late_pickup' +
+          '&dates=' + encodeURIComponent(JSON.stringify(dates)) +
+          '&reason=' + encodeURIComponent(notes || reason.name) +
+          '&departureTime=' + encodeURIComponent(depTime) +
+          '&reasonName=' + encodeURIComponent(reason.name);
+        if (pendingCorrection.deniedAttendanceId) {
+          endpoint += '&deniedId=' + pendingCorrection.deniedAttendanceId;
         }
-      });
+
+        apiCall(endpoint, function(r) {
+          btn.classList.remove('loading'); btn.disabled = false;
+          document.getElementById('attendanceLateModal').style.display = 'none';
+          if (r && r._error) { showErrorModal(r._error); return; }
+          var emp = findEmployee(pendingCorrection.email);
+          if (emp) { emp.pendingLateToday = true; emp.deniedLateArrival = null; }
+          try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
+          if (pendingCorrection.action === 'Start Working') {
+            executeCleanPunch(emp, 'Start Working');
+          }
+        });
+
+      } else {
+        // INFO-ONLY PATH
+        var reasonText = document.getElementById('attLateReason').value.trim();
+        if (!reasonText) {
+          document.getElementById('attLateError').style.display = 'block';
+          document.getElementById('attLateError').textContent = 'Please explain the reason for being late.';
+          return;
+        }
+        document.getElementById('attLateError').style.display = 'none';
+
+        var btn2 = document.getElementById('attLateSubmitBtn');
+        btn2.classList.add('loading'); btn2.disabled = true;
+
+        var endpoint2 = 'page=tc-api-attendance' +
+          '&email=' + encodeURIComponent(pendingCorrection.email) +
+          '&name=' + encodeURIComponent(pendingCorrection.name) +
+          '&type=late_arrival' +
+          '&dates=' + encodeURIComponent(JSON.stringify(dates)) +
+          '&reason=' + encodeURIComponent(reasonText);
+        if (pendingCorrection.deniedAttendanceId) {
+          endpoint2 += '&deniedId=' + pendingCorrection.deniedAttendanceId;
+        }
+
+        apiCall(endpoint2, function(r) {
+          btn2.classList.remove('loading'); btn2.disabled = false;
+          document.getElementById('attendanceLateModal').style.display = 'none';
+          if (r && r._error) { showErrorModal(r._error); return; }
+          var emp = findEmployee(pendingCorrection.email);
+          if (emp) { emp.pendingLateToday = true; emp.deniedLateArrival = null; }
+          try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
+          if (pendingCorrection.action === 'Start Working') {
+            executeCleanPunch(emp, 'Start Working');
+          }
+        });
+      }
     }
 
     // ========== ATTENDANCE: MISSED SHIFT HELPERS ==========
@@ -674,8 +837,17 @@
       return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate();
     }
 
+    function renderAbsenceReasonOptions() {
+      var container = document.getElementById('attShiftOptions');
+      var reasons = (absenceReasons && absenceReasons.length > 0) ? absenceReasons : ['Sick Day', 'Personal Day', 'Vacation'];
+      var html = '';
+      for (var i = 0; i < reasons.length; i++) {
+        html += '<label><input type="radio" name="attShiftChoice" value="' + reasons[i] + '"> ' + reasons[i] + '</label>';
+      }
+      container.innerHTML = html;
+    }
+
     function showMissedShiftModal(missedData, isDenied) {
-      // missedData can be [{date, dayName},...] or just ['yyyy-MM-dd',...]
       var dates = [];
       var datesHtml = '';
       for (var i = 0; i < missedData.length; i++) {
@@ -696,15 +868,14 @@
       document.getElementById('attShiftDates').innerHTML = datesHtml;
       document.getElementById('attShiftError').style.display = 'none';
 
-      // Multi-day: auto-select Vacation
       if (dates.length > 1) {
         document.getElementById('attShiftOptions').style.display = 'none';
         document.getElementById('attShiftVacation').style.display = 'block';
         document.getElementById('attVacBadge').textContent = 'Vacation — ' + dates.length + ' day' + (dates.length > 1 ? 's' : '');
       } else {
-        document.getElementById('attShiftOptions').style.display = 'block';
         document.getElementById('attShiftVacation').style.display = 'none';
-        // Clear previous selection
+        document.getElementById('attShiftOptions').style.display = 'block';
+        renderAbsenceReasonOptions();
         var radios = document.querySelectorAll('input[name="attShiftChoice"]');
         for (var r = 0; r < radios.length; r++) radios[r].checked = false;
       }
@@ -745,16 +916,9 @@
         btn.classList.remove('loading'); btn.disabled = false;
         document.getElementById('attendanceShiftModal').style.display = 'none';
         if (r && r._error) { showErrorModal(r._error); return; }
-
-        // Mark as handled
         var emp = findEmployee(pendingCorrection.email);
-        if (emp) {
-          emp.missedShifts = [];
-          emp.deniedMissedShift = null;
-        }
+        if (emp) { emp.missedShifts = []; emp.deniedMissedShift = null; }
         try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
-
-        // Now re-enter handleSubmit flow for remaining checks
         handleSubmit();
       });
     }
@@ -778,7 +942,6 @@
         btn.classList.remove('loading'); btn.disabled = false;
         document.getElementById('missedClockOutModal').style.display = 'none';
         if (r && r._error) { showErrorModal(r._error); return; }
-        // Update local employee state so next punch works
         var emp = findEmployee(pendingCorrection.email);
         if (emp) { emp.lastAction = 'Start Working'; emp.lastDate = getTodayStr(); emp.hasTodayClockIn = true; }
         try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
@@ -805,7 +968,6 @@
         btn.classList.remove('loading'); btn.disabled = false;
         document.getElementById('missedClockInModal').style.display = 'none';
         if (r && r._error) { showErrorModal(r._error); return; }
-        // Update local employee state
         var emp = findEmployee(pendingCorrection.email);
         if (emp) { emp.lastAction = 'Ok, See You'; emp.lastDate = getTodayStr(); emp.hasTodayClockIn = true; }
         try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
@@ -838,7 +1000,6 @@
         btn.classList.remove('loading'); btn.disabled = false;
         document.getElementById('deniedCorrectionModal').style.display = 'none';
         if (r && r._error) { showErrorModal(r._error); return; }
-        // Clear denied correction from local state
         var emp = findEmployee(pendingCorrection.email);
         if (emp) { emp.deniedCorrection = null; }
         try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
