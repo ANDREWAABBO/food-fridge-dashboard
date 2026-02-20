@@ -734,6 +734,7 @@
       var emp = findEmployee(pendingCorrection.email);
       if (!emp) { showErrorModal('Employee not found.'); return; }
       var today = getTodayStr();
+      var action = pendingCorrection.action;
 
       // ---- 1. DENIED CORRECTION CHECK (instant) ----
       if (emp.deniedCorrection) {
@@ -758,7 +759,7 @@
       }
 
       // ---- 1c. DENIED LATE ARRIVAL RESUBMIT (instant) ----
-      if (emp.deniedLateArrival && actionEl.value === 'Start Working') {
+      if (emp.deniedLateArrival && action === 'Start Working') {
         var dla = emp.deniedLateArrival;
         pendingCorrection.deniedAttendanceId = dla.id;
         pendingCorrection.lateDates = [dla.date || today];
@@ -778,7 +779,7 @@
       }
 
       // ---- 3. MISSED CLOCK-OUT CHECK (instant) ----
-      if (actionEl.value === 'Start Working' && emp.lastAction === 'Start Working' && emp.lastDate && emp.lastDate < today) {
+      if (action === 'Start Working' && emp.lastAction === 'Start Working' && emp.lastDate && emp.lastDate < today) {
         pendingCorrection.missedDate = emp.lastDate;
         document.getElementById('missedCODate').textContent = emp.lastDateFormatted || emp.lastDate;
         document.getElementById('missedCOClockIn').textContent = emp.lastTime || '--';
@@ -788,7 +789,7 @@
       }
 
       // ---- 4. MISSED CLOCK-IN CHECK (instant) ----
-      if (actionEl.value === 'Ok, See You' && !emp.hasTodayClockIn) {
+      if (action === 'Ok, See You' && !emp.hasTodayClockIn) {
         pendingCorrection.todayDate = today;
         var todayObj = new Date();
         var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -800,7 +801,7 @@
       }
 
       // ---- 5. LATE ARRIVAL CHECK (instant) ----
-      if (actionEl.value === 'Start Working' && emp.scheduledStartToday && !emp.pendingLateToday) {
+      if (action === 'Start Working' && emp.scheduledStartToday && !emp.pendingLateToday) {
         var lateMinutes = calcLateMinutes(emp.scheduledStartToday);
         if (lateMinutes >= 30) {
           pendingCorrection.lateDates = [today];
@@ -810,9 +811,9 @@
       }
 
       // ---- 6. DUPLICATE CHECK (instant) ----
-      if (emp.lastAction === actionEl.value && emp.lastDate === today) {
-        var lastAction = actionEl.value === 'Start Working' ? 'clocked in' : 'clocked out';
-        showSuccessModal(emp.name, actionEl.value, '');
+      if (emp.lastAction === action && emp.lastDate === today) {
+        var lastAction = action === 'Start Working' ? 'clocked in' : 'clocked out';
+        showSuccessModal(emp.name, action, '');
         document.getElementById('successTitle').textContent = "You're All Set!";
         document.getElementById('successAction').textContent = 'You already ' + lastAction + ' today.';
         document.getElementById('successTime').textContent = '';
@@ -820,7 +821,7 @@
       }
 
       // ---- 7. CLEAN PUNCH — optimistic success + fire server ----
-      executeCleanPunch(emp, actionEl.value);
+      executeCleanPunch(emp, action);
     }
 
     function executeCleanPunch(emp, action) {
