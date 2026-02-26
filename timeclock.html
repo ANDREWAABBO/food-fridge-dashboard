@@ -96,6 +96,23 @@
     .att-textarea { width: 100%; padding: 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 14px; resize: vertical; min-height: 80px; font-family: inherit; box-sizing: border-box; }
     .att-textarea:focus { outline: none; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
     .att-required { color: #dc2626; font-size: 12px; margin-top: 4px; display: none; }
+
+    /* Per-date missed shift cards */
+    .ms-date-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; }
+    .ms-date-card.complete { border-color: #86efac; background: #f0fdf4; }
+    .ms-date-label { font-size: 14px; font-weight: 600; color: #0f172a; margin-bottom: 10px; }
+    .ms-category-btns { display: flex; gap: 8px; margin-bottom: 10px; }
+    .ms-cat-btn { flex: 1; padding: 10px 8px; border: 2px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 600; text-align: center; transition: all 0.15s; }
+    .ms-cat-btn:hover { border-color: #cbd5e1; }
+    .ms-cat-btn.active-absence { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
+    .ms-cat-btn.active-closure { border-color: #3b82f6; background: #eff6ff; color: #1e40af; }
+    .ms-reason-list { display: none; }
+    .ms-reason-list.visible { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ms-reason-chip { padding: 8px 14px; border: 2px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
+    .ms-reason-chip:hover { border-color: #cbd5e1; }
+    .ms-reason-chip.selected { border-color: #2563eb; background: #eff6ff; color: #1e40af; }
+    .ms-check { display: none; color: #16a34a; font-weight: 700; font-size: 14px; float: right; }
+    .ms-date-card.complete .ms-check { display: inline; }
     .modal-detail { color: #64748b; font-size: 14px; margin-top: 4px; }
     .modal-timestamp { color: #94a3b8; font-size: 13px; margin-top: 8px; }
     .btn-modal-close {
@@ -323,20 +340,14 @@
 
   <!-- Attendance: Missed Shift Modal -->
   <div class="modal-overlay" id="attendanceShiftModal">
-    <div class="modal-card">
+    <div class="modal-card" style="max-width:440px;">
       <div class="modal-icon warning">
         <svg viewBox="0 0 24 24"><path class="tri" d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line class="exc" x1="12" y1="9" x2="12" y2="13"></line><line class="exc" x1="12" y1="17" x2="12.01" y2="17"></line></svg>
       </div>
       <h3 id="attShiftTitle">Missed Shift</h3>
       <p id="attShiftDesc" style="color:#475569;font-size:14px;"></p>
-      <div id="attShiftDates" class="att-dates-list"></div>
-      <!-- Dynamic reason options -->
-      <div id="attShiftOptions" class="att-radio-group"></div>
-      <!-- Multi-day auto vacation -->
-      <div id="attShiftVacation" style="display:none; margin:12px 0;">
-        <span class="att-vacation-badge" id="attVacBadge">Vacation — 0 days</span>
-      </div>
-      <div id="attShiftError" class="att-required">Please select a reason.</div>
+      <div id="attShiftDateCards" style="margin:12px 0;max-height:50vh;overflow-y:auto;"></div>
+      <div id="attShiftError" class="att-required">Please select a reason for each date.</div>
       <button class="btn-correction-submit" id="attShiftSubmitBtn" onclick="submitAttendanceShift()">
         <div class="btn-spinner"></div>
         <span class="btn-label">Submit & Continue</span>
@@ -470,6 +481,7 @@
     var pendingCorrection = {};
     var lateArrivalReasons = [{ id: 'was_late', name: 'I Was Late', requiresTimeAdjustment: false }];
     var absenceReasons = ['Sick Day', 'Personal Day', 'Vacation'];
+    var closureReasons = ['Snow Storm', 'Holiday'];
 
     // ========== INIT ==========
     (function init() {
@@ -539,6 +551,7 @@
           if (parsed.today) serverToday = parsed.today;
           if (parsed.lateArrivalReasons && parsed.lateArrivalReasons.length > 0) lateArrivalReasons = parsed.lateArrivalReasons;
           if (parsed.absenceReasons && parsed.absenceReasons.length > 0) absenceReasons = parsed.absenceReasons;
+          if (parsed.closureReasons && parsed.closureReasons.length > 0) closureReasons = parsed.closureReasons;
         }
       } catch(e) {}
 
@@ -554,7 +567,8 @@
         if (response.today) serverToday = response.today;
         if (response.lateArrivalReasons && response.lateArrivalReasons.length > 0) lateArrivalReasons = response.lateArrivalReasons;
         if (response.absenceReasons && response.absenceReasons.length > 0) absenceReasons = response.absenceReasons;
-        try { localStorage.setItem(TC_EMP_CACHE_KEY, JSON.stringify({ employees: freshEmployees, companyName: response.companyName || '', today: serverToday, lateArrivalReasons: lateArrivalReasons, absenceReasons: absenceReasons })); } catch(e) {}
+        if (response.closureReasons && response.closureReasons.length > 0) closureReasons = response.closureReasons;
+        try { localStorage.setItem(TC_EMP_CACHE_KEY, JSON.stringify({ employees: freshEmployees, companyName: response.companyName || '', today: serverToday, lateArrivalReasons: lateArrivalReasons, absenceReasons: absenceReasons, closureReasons: closureReasons })); } catch(e) {}
         populateDropdown(freshEmployees, response.companyName);
       });
     }
@@ -1047,65 +1061,132 @@
       return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate();
     }
 
-    function renderAbsenceReasonOptions() {
-      var container = document.getElementById('attShiftOptions');
-      var reasons = (absenceReasons && absenceReasons.length > 0) ? absenceReasons : ['Sick Day', 'Personal Day', 'Vacation'];
-      var html = '';
-      for (var i = 0; i < reasons.length; i++) {
-        html += '<label><input type="radio" name="attShiftChoice" value="' + reasons[i] + '"> ' + reasons[i] + '</label>';
-      }
-      container.innerHTML = html;
-    }
+    function renderAbsenceReasonOptions() {} // Legacy stub — no longer used
+
+    // Per-date selections tracker: { '2026-02-23': { category: 'absence', reason: 'Sick Day' }, ... }
+    var msDateSelections = {};
 
     function showMissedShiftModal(missedData, isDenied) {
       var dates = [];
-      var datesHtml = '';
+      msDateSelections = {};
       for (var i = 0; i < missedData.length; i++) {
         var dateStr = missedData[i].date || missedData[i];
-        var dayName = missedData[i].dayName || '';
         dates.push(dateStr);
-        datesHtml += '<div class="att-date">' + (dayName ? dayName + ' — ' : '') + formatDateForDisplay(dateStr) + '</div>';
       }
       pendingCorrection.missedShiftDates = dates;
 
       var title = isDenied ? 'Missed Shift Report Not Approved' : 'Missed Shift' + (dates.length > 1 ? 's' : '');
       var desc = isDenied
-        ? 'Your previous report was not approved. Please resubmit.'
-        : 'You missed ' + dates.length + ' scheduled shift' + (dates.length > 1 ? 's' : '') + ' since your last punch:';
+        ? 'Your previous report was not approved. Please resubmit:'
+        : 'Select a reason for each missed shift:';
 
       document.getElementById('attShiftTitle').textContent = title;
       document.getElementById('attShiftDesc').textContent = desc;
-      document.getElementById('attShiftDates').innerHTML = datesHtml;
       document.getElementById('attShiftError').style.display = 'none';
 
-      if (dates.length > 1) {
-        document.getElementById('attShiftOptions').style.display = 'none';
-        document.getElementById('attShiftVacation').style.display = 'block';
-        document.getElementById('attVacBadge').textContent = 'Vacation — ' + dates.length + ' day' + (dates.length > 1 ? 's' : '');
-      } else {
-        document.getElementById('attShiftVacation').style.display = 'none';
-        document.getElementById('attShiftOptions').style.display = 'block';
-        renderAbsenceReasonOptions();
-        var radios = document.querySelectorAll('input[name="attShiftChoice"]');
-        for (var r = 0; r < radios.length; r++) radios[r].checked = false;
+      var absReasons = (absenceReasons && absenceReasons.length > 0) ? absenceReasons : ['Sick Day', 'Personal Day', 'Vacation'];
+      var clsReasons = (closureReasons && closureReasons.length > 0) ? closureReasons : ['Snow Storm', 'Holiday'];
+
+      var html = '';
+      for (var d = 0; d < dates.length; d++) {
+        var ds = dates[d];
+        var label = formatDateForDisplay(ds);
+        html += '<div class="ms-date-card" id="msCard_' + d + '">';
+        html += '<div class="ms-date-label">' + label + ' <span class="ms-check">&#10003;</span></div>';
+        html += '<div class="ms-category-btns">';
+        html += '<button type="button" class="ms-cat-btn" id="msCatAbs_' + d + '" onclick="msSelectCategory(' + d + ',\'absence\')">Absence</button>';
+        html += '<button type="button" class="ms-cat-btn" id="msCatCls_' + d + '" onclick="msSelectCategory(' + d + ',\'closure\')">Holiday / Weather</button>';
+        html += '</div>';
+        // Absence reasons
+        html += '<div class="ms-reason-list" id="msAbsReasons_' + d + '">';
+        for (var a = 0; a < absReasons.length; a++) {
+          html += '<button type="button" class="ms-reason-chip" onclick="msSelectReason(' + d + ',\'' + absReasons[a].replace(/'/g, "\\'") + '\')">' + absReasons[a] + '</button>';
+        }
+        html += '</div>';
+        // Closure reasons
+        html += '<div class="ms-reason-list" id="msClsReasons_' + d + '">';
+        for (var c = 0; c < clsReasons.length; c++) {
+          html += '<button type="button" class="ms-reason-chip" onclick="msSelectReason(' + d + ',\'' + clsReasons[c].replace(/'/g, "\\'") + '\')">' + clsReasons[c] + '</button>';
+        }
+        html += '</div>';
+        html += '</div>';
+      }
+      document.getElementById('attShiftDateCards').innerHTML = html;
+      document.getElementById('attendanceShiftModal').style.display = 'flex';
+    }
+
+    function msSelectCategory(idx, category) {
+      var dates = pendingCorrection.missedShiftDates || [];
+      var ds = dates[idx];
+      if (!msDateSelections[ds]) msDateSelections[ds] = {};
+      msDateSelections[ds].category = category;
+      msDateSelections[ds].reason = ''; // reset reason on category change
+
+      // Toggle category buttons
+      var absBtn = document.getElementById('msCatAbs_' + idx);
+      var clsBtn = document.getElementById('msCatCls_' + idx);
+      absBtn.className = 'ms-cat-btn' + (category === 'absence' ? ' active-absence' : '');
+      clsBtn.className = 'ms-cat-btn' + (category === 'closure' ? ' active-closure' : '');
+
+      // Show/hide reason lists
+      var absReasonEl = document.getElementById('msAbsReasons_' + idx);
+      var clsReasonEl = document.getElementById('msClsReasons_' + idx);
+      absReasonEl.className = 'ms-reason-list' + (category === 'absence' ? ' visible' : '');
+      clsReasonEl.className = 'ms-reason-list' + (category === 'closure' ? ' visible' : '');
+
+      // Clear reason chip selections
+      var chips = document.querySelectorAll('#msCard_' + idx + ' .ms-reason-chip');
+      for (var i = 0; i < chips.length; i++) chips[i].classList.remove('selected');
+
+      // Remove complete state
+      document.getElementById('msCard_' + idx).classList.remove('complete');
+      msUpdateSubmitState();
+    }
+
+    function msSelectReason(idx, reason) {
+      var dates = pendingCorrection.missedShiftDates || [];
+      var ds = dates[idx];
+      if (!msDateSelections[ds]) msDateSelections[ds] = {};
+      msDateSelections[ds].reason = reason;
+
+      // Highlight selected chip, deselect siblings
+      var container = msDateSelections[ds].category === 'absence'
+        ? document.getElementById('msAbsReasons_' + idx)
+        : document.getElementById('msClsReasons_' + idx);
+      var chips = container.querySelectorAll('.ms-reason-chip');
+      for (var i = 0; i < chips.length; i++) {
+        chips[i].classList.toggle('selected', chips[i].textContent === reason);
       }
 
-      document.getElementById('attendanceShiftModal').style.display = 'flex';
+      // Mark card complete
+      document.getElementById('msCard_' + idx).classList.add('complete');
+      document.getElementById('attShiftError').style.display = 'none';
+      msUpdateSubmitState();
+    }
+
+    function msUpdateSubmitState() {
+      var dates = pendingCorrection.missedShiftDates || [];
+      var allDone = true;
+      for (var d = 0; d < dates.length; d++) {
+        var sel = msDateSelections[dates[d]];
+        if (!sel || !sel.reason) { allDone = false; break; }
+      }
+      var btn = document.getElementById('attShiftSubmitBtn');
+      btn.style.opacity = allDone ? '1' : '0.5';
     }
 
     function submitAttendanceShift() {
       var dates = pendingCorrection.missedShiftDates || [];
-      var selection = '';
 
-      if (dates.length > 1) {
-        selection = 'Vacation';
-      } else {
-        var checked = document.querySelector('input[name="attShiftChoice"]:checked');
-        if (!checked) {
+      // Validate all dates have selections
+      var dateReasons = [];
+      for (var d = 0; d < dates.length; d++) {
+        var sel = msDateSelections[dates[d]];
+        if (!sel || !sel.reason) {
           document.getElementById('attShiftError').style.display = 'block';
           return;
         }
-        selection = checked.value;
+        dateReasons.push({ date: dates[d], response: sel.reason });
       }
       document.getElementById('attShiftError').style.display = 'none';
 
@@ -1117,7 +1198,7 @@
         '&name=' + encodeURIComponent(pendingCorrection.name) +
         '&type=missed_shift' +
         '&dates=' + encodeURIComponent(JSON.stringify(dates)) +
-        '&selection=' + encodeURIComponent(selection);
+        '&dateReasons=' + encodeURIComponent(JSON.stringify(dateReasons));
       if (pendingCorrection.deniedAttendanceId) {
         endpoint += '&deniedId=' + pendingCorrection.deniedAttendanceId;
       }
