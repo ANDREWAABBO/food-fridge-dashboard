@@ -381,7 +381,7 @@
       </div>
       <div class="late-detail-panel" id="lateTimeAdjDetail">
         <div class="time-picker-group" style="margin-top:0;">
-          <label>What time did you leave?</label>
+          <label>What time did you leave your residence?</label>
           <input type="time" id="lateDepartureTime" class="time-picker-input">
         </div>
         <div class="time-picker-group" style="margin-top:8px;">
@@ -1190,7 +1190,7 @@
         var emp = findEmployee(pendingCorrection.email);
         if (emp) { emp.missedShifts = []; emp.deniedMissedShift = null; }
         try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
-        handleSubmit();
+        continueAfterPin();
       });
     }
 
