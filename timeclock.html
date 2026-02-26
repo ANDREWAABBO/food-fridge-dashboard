@@ -107,10 +107,16 @@
     .ms-cat-btn.active-absence { border-color: #f59e0b; background: #fffbeb; color: #92400e; }
     .ms-cat-btn.active-closure { border-color: #3b82f6; background: #eff6ff; color: #1e40af; }
     .ms-reason-list { display: none; }
-    .ms-reason-list.visible { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ms-reason-list.visible { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
     .ms-reason-chip { padding: 8px 14px; border: 2px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer; font-size: 13px; font-weight: 500; transition: all 0.15s; }
     .ms-reason-chip:hover { border-color: #cbd5e1; }
     .ms-reason-chip.selected { border-color: #2563eb; background: #eff6ff; color: #1e40af; }
+    .ms-reason-chip.ms-absence-chip { border-color: #fcd34d; background: #fffbeb; color: #92400e; }
+    .ms-reason-chip.ms-absence-chip:hover { border-color: #f59e0b; }
+    .ms-reason-chip.ms-absence-chip.selected { border-color: #d97706; background: #fef3c7; color: #78350f; }
+    .ms-reason-chip.ms-closure-chip { border-color: #bfdbfe; background: #eff6ff; color: #1e40af; }
+    .ms-reason-chip.ms-closure-chip:hover { border-color: #93c5fd; }
+    .ms-reason-chip.ms-closure-chip.selected { border-color: #2563eb; background: #dbeafe; color: #1e3a8a; }
     .ms-check { display: none; color: #16a34a; font-weight: 700; font-size: 14px; float: right; }
     .ms-date-card.complete .ms-check { display: inline; }
     .modal-detail { color: #64748b; font-size: 14px; margin-top: 4px; }
@@ -363,19 +369,16 @@
       </div>
       <h3 id="attLateTitle">Late Arrival Notification</h3>
       <p id="attLateDesc" style="color:#475569;font-size:14px;"></p>
-      <!-- Reason selection -->
       <div style="text-align:left;margin:16px 0;">
         <label style="font-size:13px;font-weight:600;color:#374151;display:block;margin-bottom:8px;">Select your reason:</label>
         <div id="lateReasonOptions" class="late-reason-options"></div>
       </div>
-      <!-- Info-only detail: free text -->
       <div class="late-detail-panel" id="lateInfoDetail">
         <div class="time-picker-group" style="margin-top:0;">
           <label>Please explain:</label>
           <textarea id="attLateReason" class="att-textarea" placeholder="Please explain the reason for your late arrival..."></textarea>
         </div>
       </div>
-      <!-- Time-adjustment detail: time picker + optional notes -->
       <div class="late-detail-panel" id="lateTimeAdjDetail">
         <div class="time-picker-group" style="margin-top:0;">
           <label>What time did you leave?</label>
@@ -480,8 +483,8 @@
     var TC_EMP_CACHE_KEY = '_cache_tcEmployees';
     var pendingCorrection = {};
     var lateArrivalReasons = [{ id: 'was_late', name: 'I Was Late', requiresTimeAdjustment: false }];
-    var absenceReasons = ['Sick Day', 'Personal Day', 'Vacation'];
-    var closureReasons = ['Snow Storm', 'Holiday'];
+    var absenceReasons = [];
+    var closureReasons = [];
 
     // ========== INIT ==========
     (function init() {
@@ -700,7 +703,6 @@
           document.getElementById('pinEntryMessage').textContent = 'Incorrect PIN. Try again.';
           document.getElementById('pinEntryMessage').className = 'pin-message error';
           setPinError('pinEntryInputs', true);
-          // Clear inputs for retry
           var inputs = document.getElementById('pinEntryInputs').querySelectorAll('input');
           for (var i = 0; i < inputs.length; i++) inputs[i].value = '';
           inputs[0].focus();
@@ -735,7 +737,6 @@
         btn.classList.remove('loading'); btn.disabled = false;
         if (r && r._error) { showErrorModal(r._error); return; }
         if (!r.success) { msg.textContent = r._error || 'Failed to create PIN.'; msg.className = 'pin-message error'; return; }
-        // Update local state
         var emp = findEmployee(pendingCorrection.email);
         if (emp) emp.hasPin = true;
         try { localStorage.removeItem(TC_EMP_CACHE_KEY); } catch(e) {}
@@ -751,7 +752,6 @@
       var today = getTodayStr();
       var action = pendingCorrection.action;
 
-      // ---- 1. DENIED CORRECTION CHECK (instant) ----
       if (emp.deniedCorrection) {
         var corr = emp.deniedCorrection;
         pendingCorrection.correctionId = corr.id;
@@ -764,7 +764,6 @@
         return;
       }
 
-      // ---- 1b. DENIED MISSED SHIFT RESUBMIT (instant) ----
       if (emp.deniedMissedShift) {
         var dms = emp.deniedMissedShift;
         pendingCorrection.deniedAttendanceId = dms.id;
@@ -773,7 +772,6 @@
         return;
       }
 
-      // ---- 1c. DENIED LATE ARRIVAL RESUBMIT (instant) ----
       if (emp.deniedLateArrival && action === 'Start Working') {
         var dla = emp.deniedLateArrival;
         pendingCorrection.deniedAttendanceId = dla.id;
@@ -782,7 +780,6 @@
         return;
       }
 
-      // ---- 2. MISSED SHIFT CHECK (instant) ----
       if (emp.missedShifts && emp.missedShifts.length > 0) {
         var dates = [];
         for (var ms = 0; ms < emp.missedShifts.length; ms++) {
@@ -793,7 +790,6 @@
         return;
       }
 
-      // ---- 3. MISSED CLOCK-OUT CHECK (instant) ----
       if (action === 'Start Working' && emp.lastAction === 'Start Working' && emp.lastDate && emp.lastDate < today) {
         pendingCorrection.missedDate = emp.lastDate;
         document.getElementById('missedCODate').textContent = emp.lastDateFormatted || emp.lastDate;
@@ -803,7 +799,6 @@
         return;
       }
 
-      // ---- 4. MISSED CLOCK-IN CHECK (instant) ----
       if (action === 'Ok, See You' && !emp.hasTodayClockIn) {
         pendingCorrection.todayDate = today;
         var todayObj = new Date();
@@ -815,7 +810,6 @@
         return;
       }
 
-      // ---- 5. LATE ARRIVAL CHECK (instant) ----
       if (action === 'Start Working' && emp.scheduledStartToday && !emp.pendingLateToday) {
         var lateMinutes = calcLateMinutes(emp.scheduledStartToday);
         if (lateMinutes >= 30) {
@@ -825,7 +819,6 @@
         }
       }
 
-      // ---- 6. DUPLICATE CHECK (instant) ----
       if (emp.lastAction === action && emp.lastDate === today) {
         var lastAction = action === 'Start Working' ? 'clocked in' : 'clocked out';
         showSuccessModal(emp.name, action, '');
@@ -835,7 +828,6 @@
         return;
       }
 
-      // ---- 7. CLEAN PUNCH — optimistic success + fire server ----
       executeCleanPunch(emp, action);
     }
 
@@ -924,18 +916,14 @@
       document.getElementById('attLateDesc').textContent = desc;
       document.getElementById('attLateError').style.display = 'none';
 
-      // Render configurable reason options
       renderLateReasonOptions();
 
-      // Hide detail panels and submit button until reason selected
       document.getElementById('lateInfoDetail').classList.remove('visible');
       document.getElementById('lateTimeAdjDetail').classList.remove('visible');
       document.getElementById('attLateSubmitBtn').style.display = 'none';
 
-      // If prefill (denied resubmit), pre-select and show text
       if (prefillReason) {
         document.getElementById('attLateReason').value = prefillReason;
-        // Auto-select first info-only reason and show text panel
         for (var i = 0; i < lateArrivalReasons.length; i++) {
           if (!lateArrivalReasons[i].requiresTimeAdjustment) {
             var rid = 'lateReason_' + i;
@@ -967,7 +955,6 @@
         return;
       }
 
-      // Find which reason was selected
       var reasonIndex = -1;
       for (var i = 0; i < lateArrivalReasons.length; i++) {
         if (lateArrivalReasons[i].id === selected.value) { reasonIndex = i; break; }
@@ -978,7 +965,6 @@
       var dates = pendingCorrection.lateDates || [getTodayStr()];
 
       if (reason.requiresTimeAdjustment) {
-        // TIME ADJUSTMENT PATH
         var depTime = document.getElementById('lateDepartureTime').value;
         if (!depTime) {
           document.getElementById('attLateError').style.display = 'block';
@@ -1016,7 +1002,6 @@
         });
 
       } else {
-        // INFO-ONLY PATH
         var reasonText = document.getElementById('attLateReason').value.trim();
         if (!reasonText) {
           document.getElementById('attLateError').style.display = 'block';
@@ -1061,9 +1046,8 @@
       return days[d.getDay()] + ', ' + months[d.getMonth()] + ' ' + d.getDate();
     }
 
-    function renderAbsenceReasonOptions() {} // Legacy stub — no longer used
+    function renderAbsenceReasonOptions() {} // Legacy stub
 
-    // Per-date selections tracker: { '2026-02-23': { category: 'absence', reason: 'Sick Day' }, ... }
     var msDateSelections = {};
 
     function showMissedShiftModal(missedData, isDenied) {
@@ -1084,7 +1068,12 @@
       document.getElementById('attShiftDesc').textContent = desc;
       document.getElementById('attShiftError').style.display = 'none';
 
-      var absReasons = (absenceReasons && absenceReasons.length > 0) ? absenceReasons : ['Sick Day', 'Personal Day', 'Vacation'];
+      // Handle object format for absence reasons (backward compat with string arrays)
+      var rawAbs = (absenceReasons && absenceReasons.length > 0) ? absenceReasons : ['Sick Day', 'Personal Day', 'Vacation'];
+      var absReasons = [];
+      for (var ra = 0; ra < rawAbs.length; ra++) {
+        absReasons.push(typeof rawAbs[ra] === 'string' ? rawAbs[ra] : rawAbs[ra].name);
+      }
       var clsReasons = (closureReasons && closureReasons.length > 0) ? closureReasons : ['Snow Storm', 'Holiday'];
 
       var html = '';
@@ -1097,16 +1086,14 @@
         html += '<button type="button" class="ms-cat-btn" id="msCatAbs_' + d + '" onclick="msSelectCategory(' + d + ',\'absence\')">Absence</button>';
         html += '<button type="button" class="ms-cat-btn" id="msCatCls_' + d + '" onclick="msSelectCategory(' + d + ',\'closure\')">Holiday / Weather</button>';
         html += '</div>';
-        // Absence reasons
         html += '<div class="ms-reason-list" id="msAbsReasons_' + d + '">';
         for (var a = 0; a < absReasons.length; a++) {
-          html += '<button type="button" class="ms-reason-chip" onclick="msSelectReason(' + d + ',\'' + absReasons[a].replace(/'/g, "\\'") + '\')">' + absReasons[a] + '</button>';
+          html += '<button type="button" class="ms-reason-chip ms-absence-chip" onclick="msSelectReason(' + d + ',\'' + absReasons[a].replace(/'/g, "\\'") + '\')">' + absReasons[a] + '</button>';
         }
         html += '</div>';
-        // Closure reasons
         html += '<div class="ms-reason-list" id="msClsReasons_' + d + '">';
         for (var c = 0; c < clsReasons.length; c++) {
-          html += '<button type="button" class="ms-reason-chip" onclick="msSelectReason(' + d + ',\'' + clsReasons[c].replace(/'/g, "\\'") + '\')">' + clsReasons[c] + '</button>';
+          html += '<button type="button" class="ms-reason-chip ms-closure-chip" onclick="msSelectReason(' + d + ',\'' + clsReasons[c].replace(/'/g, "\\'") + '\')">' + clsReasons[c] + '</button>';
         }
         html += '</div>';
         html += '</div>';
@@ -1120,25 +1107,21 @@
       var ds = dates[idx];
       if (!msDateSelections[ds]) msDateSelections[ds] = {};
       msDateSelections[ds].category = category;
-      msDateSelections[ds].reason = ''; // reset reason on category change
+      msDateSelections[ds].reason = '';
 
-      // Toggle category buttons
       var absBtn = document.getElementById('msCatAbs_' + idx);
       var clsBtn = document.getElementById('msCatCls_' + idx);
       absBtn.className = 'ms-cat-btn' + (category === 'absence' ? ' active-absence' : '');
       clsBtn.className = 'ms-cat-btn' + (category === 'closure' ? ' active-closure' : '');
 
-      // Show/hide reason lists
       var absReasonEl = document.getElementById('msAbsReasons_' + idx);
       var clsReasonEl = document.getElementById('msClsReasons_' + idx);
       absReasonEl.className = 'ms-reason-list' + (category === 'absence' ? ' visible' : '');
       clsReasonEl.className = 'ms-reason-list' + (category === 'closure' ? ' visible' : '');
 
-      // Clear reason chip selections
       var chips = document.querySelectorAll('#msCard_' + idx + ' .ms-reason-chip');
       for (var i = 0; i < chips.length; i++) chips[i].classList.remove('selected');
 
-      // Remove complete state
       document.getElementById('msCard_' + idx).classList.remove('complete');
       msUpdateSubmitState();
     }
@@ -1149,7 +1132,6 @@
       if (!msDateSelections[ds]) msDateSelections[ds] = {};
       msDateSelections[ds].reason = reason;
 
-      // Highlight selected chip, deselect siblings
       var container = msDateSelections[ds].category === 'absence'
         ? document.getElementById('msAbsReasons_' + idx)
         : document.getElementById('msClsReasons_' + idx);
@@ -1158,7 +1140,6 @@
         chips[i].classList.toggle('selected', chips[i].textContent === reason);
       }
 
-      // Mark card complete
       document.getElementById('msCard_' + idx).classList.add('complete');
       document.getElementById('attShiftError').style.display = 'none';
       msUpdateSubmitState();
@@ -1178,7 +1159,6 @@
     function submitAttendanceShift() {
       var dates = pendingCorrection.missedShiftDates || [];
 
-      // Validate all dates have selections
       var dateReasons = [];
       for (var d = 0; d < dates.length; d++) {
         var sel = msDateSelections[dates[d]];
